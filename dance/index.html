@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Move & Dance – WebXR</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>body{margin:0;background:#000}</style>
+  <script>
+  const MD = { seq:['left','right','up','down','jump'], idx:0, score:0, timePerMove:3000, last:0, running:true };
+  AFRAME.registerComponent('dance-game',{ init(){ this.p=document.querySelector('#prompt'); this.s=document.querySelector('#score'); this.next();
+      window.addEventListener('keydown',(e)=>{ const map={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',' ':'jump'}; const m=map[e.key]||(e.code==='Space'?'jump':null); if(m)this.check(m); });
+      document.querySelectorAll('.key').forEach(k=>k.addEventListener('mouseenter',()=>this.check(k.getAttribute('data-move')))); },
+    next(){ if(MD.idx>=MD.seq.length){ MD.running=false; this.p.setAttribute('text','value','เยี่ยม! จบชุดท่าแล้ว'); parent&&parent.postMessage({type:'DANCE_COMPLETE',score:MD.score},'*'); return; }
+      this.cur=MD.seq[MD.idx]; this.p.setAttribute('text','value','ท่าต่อไป: '+this.cur.toUpperCase()); MD.last=performance.now(); },
+    tick(){ if(!MD.running)return; const now=performance.now(); if(now-MD.last>MD.timePerMove){ MD.idx++; this.next(); } },
+    check(move){ if(!MD.running)return; const wall=document.querySelector('#wall'); if(move===this.cur){ MD.score+=10; this.s.setAttribute('text','value','คะแนน: '+MD.score); wall.setAttribute('material','color','#66BB6A'); setTimeout(()=>wall.setAttribute('material','color','#3949ab'),300); MD.idx++; this.next(); }
+      else{ wall.setAttribute('material','color','#ef5350'); setTimeout(()=>wall.setAttribute('material','color','#3949ab'),300); } } });
+  </script>
+</head>
+<body>
+  <a-scene renderer="antialias:true" embedded xr-mode-ui="enabled:true">
+    <a-entity position="0 1.6 0"><a-camera wasd-controls-enabled="false"><a-cursor></a-cursor></a-camera></a-entity>
+    <a-sky color="#212121"></a-sky><a-entity light="type: ambient; intensity: 0.9"></a-entity>
+    <a-box id="wall" position="0 2 -3" width="6" height="3" depth="0.1" color="#3949ab"></a-box>
+    <a-entity id="prompt" text="value:; color:#FFEB3B; width:6" position="-2.7 2.9 -2.9"></a-entity>
+    <a-entity id="score"  text="value:คะแนน: 0; color:#FFFFFF; width:6" position="-2.7 2.6 -2.9"></a-entity>
+    <a-entity position="0 1 -1.5">
+      <a-box class="key" data-move="left"  position="-1 0 0" depth="0.1" height="0.3" width="0.6" color="#263238"></a-box><a-text value="LEFT"  color="#fff" width="2" position="-1.25 0.05 0.01"></a-text>
+      <a-box class="key" data-move="right" position="1 0 0" depth="0.1" height="0.3" width="0.6" color="#263238"></a-box><a-text value="RIGHT" color="#fff" width="2" position="0.75 0.05 0.01"></a-text>
+      <a-box class="key" data-move="up"    position="0 0.3 0" depth="0.1" height="0.3" width="0.6" color="#263238"></a-box><a-text value="UP"    color="#fff" width="2" position="-0.2 0.35 0.01"></a-text>
+      <a-box class="key" data-move="down"  position="0 -0.3 0" depth="0.1" height="0.3" width="0.6" color="#263238"></a-box><a-text value="DOWN"  color="#fff" width="2" position="-0.35 -0.25 0.01"></a-text>
+      <a-box class="key" data-move="jump"  position="0 -0.9 0" depth="0.1" height="0.3" width="0.6" color="#263238"></a-box><a-text value="JUMP"  color="#fff" width="2" position="-0.25 -0.85 0.01"></a-text>
+    </a-entity>
+    <a-entity dance-game></a-entity>
+  </a-scene>
+</body>
+</html>

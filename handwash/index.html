@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Handwash Quest – WebXR</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>body{margin:0;background:#000}</style>
+  <script>
+  const HWQ = { order: ["wet","palm","back","fingers","thumb","tips","rinse","dry"], done:{}, curStep:"wet", startTime:null,
+    next(){const i=this.order.indexOf(this.curStep);return this.order[i+1]||null;},
+    reset(){this.done={};this.curStep="wet";this.startTime=null;}, complete(){return this.order.every(s=>!!this.done[s]);} };
+  AFRAME.registerComponent('handwash-step',{schema:{name:{type:'string'},duration:{type:'number',default:2500}},
+    init(){this.active=false;this.t=0;this.el.addEventListener('mouseenter',()=>{if(HWQ.curStep!==this.data.name)return;this.active=true;this.t=0;});
+           this.el.addEventListener('mouseleave',()=>{this.active=false;this.t=0;this.el.setAttribute('material','color','#039BE5');});},
+    tick(_,d){if(!this.active)return;this.t+=d;const p=Math.min(1,this.t/this.data.duration);this.el.setAttribute('material','color',p<1?'#FFC107':'#4CAF50');
+              if(p>=1){this.active=false;HWQ.done[this.data.name]=true;const n=HWQ.next();if(n)HWQ.curStep=n;
+                if(HWQ.complete()){const total=Math.round((performance.now()-(HWQ.startTime||performance.now()))/1000);
+                  parent&&parent.postMessage({type:'HWQ_COMPLETE',totalSeconds:total,done:HWQ.done},'*');}}}});
+  AFRAME.registerComponent('ui-init',{init(){HWQ.reset();HWQ.startTime=performance.now();}});
+  </script>
+</head>
+<body>
+  <a-scene renderer="antialias:true" embedded xr-mode-ui="enabled:true">
+    <a-entity position="0 1.6 0"><a-camera wasd-controls-enabled="false"><a-cursor></a-cursor></a-camera></a-entity>
+    <a-plane position="0 0 -2" rotation="-90 0 0" width="8" height="6" color="#ECEFF1"></a-plane>
+    <a-entity ui-init position="0 1.2 -1.2">
+      <a-box position="-2 0 0" depth="0.1" height="0.4" width="0.8" color="#039BE5" handwash-step="name: wet; duration:1500"></a-box>
+      <a-box position="-1 0 0" depth="0.1" height="0.4" width="0.8" color="#039BE5" handwash-step="name: palm"></a-box>
+      <a-box position="0 0 0" depth="0.1" height="0.4" width="0.8" color="#039BE5" handwash-step="name: back"></a-box>
+      <a-box position="1 0 0" depth="0.1" height="0.4" width="0.8" color="#039BE5" handwash-step="name: fingers"></a-box>
+      <a-box position="-2 -0.6 0" depth="0.1" height="0.4" width="0.8" color="#039BE5" handwash-step="name: thumb"></a-box>
+      <a-box position="-1 -0.6 0" depth="0.1" height="0.4" width="0.8" color="#039BE5" handwash-step="name: tips"></a-box>
+      <a-box position="0 -0.6 0" depth="0.1" height="0.4" width="0.8" color="#039BE5" handwash-step="name: rinse; duration:1500"></a-box>
+      <a-box position="1 -0.6 0" depth="0.1" height="0.4" width="0.8" color="#039BE5" handwash-step="name: dry; duration:1500"></a-box>
+      <a-text value="แตะตามลำดับขั้นล้างมือให้ครบ" color="#FFFFFF" width="4" position="-1.9 0.5 0"></a-text>
+    </a-entity>
+    <a-sky color="#263238"></a-sky>
+  </a-scene>
+</body>
+</html>

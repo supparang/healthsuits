@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Virtual Health Suite – Hub/Portal</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#0b132b;color:#fff}
+    header{padding:16px 20px;background:#1c2541;border-bottom:1px solid rgba(255,255,255,.1)}
+    h1{margin:0;font-size:20px}
+    .wrap{display:flex;gap:16px;height:calc(100vh - 64px);padding:16px}
+    .panel{background:#3a506b;border-radius:12px;padding:12px}
+    .left{width:320px;display:flex;flex-direction:column;gap:12px}
+    .card{background:#1c2541;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px}
+    .card h3{margin:0 0 8px 0;font-size:16px}
+    .btn{display:block;width:100%;text-align:center;padding:10px 12px;margin-top:8px;border-radius:8px;border:0;cursor:pointer;
+         background:#5bc0be;color:#072a2d;font-weight:700}
+    .btn:hover{filter:brightness(1.05)}
+    .right{flex:1;display:flex;flex-direction:column}
+    .framewrap{flex:1;border:1px solid rgba(255,255,255,.15);border-radius:12px;overflow:hidden;background:#0b132b}
+    iframe{border:0;width:100%;height:100%}
+    .log{height:160px;overflow:auto;background:#0b132b;border:1px dashed rgba(255,255,255,.2);border-radius:10px;padding:8px;font-size:13px;white-space:pre-wrap}
+    .hint{font-size:12px;opacity:.85}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Virtual Health Suite – Hub/Portal</h1>
+    <div class="hint">เลือกมินิเกมด้านซ้าย ระบบจะแสดงในกรอบแสดงผลด้านขวา และบันทึกผลผ่าน postMessage</div>
+  </header>
+  <div class="wrap">
+    <div class="left panel">
+      <div class="card">
+        <h3>🧼 Handwash Quest</h3>
+        <div class="hint">ฝึกล้างมือ 7 ขั้นตอน</div>
+        <button class="btn" onclick="loadGame('handwash/embed.html')">เปิดเกม</button>
+      </div>
+      <div class="card">
+        <h3>🍎 Nutrition Shop</h3>
+        <div class="hint">เลือกอาหารให้ครบ 5 หมู่</div>
+        <button class="btn" onclick="loadGame('nutrition/embed.html')">เปิดเกม</button>
+      </div>
+      <div class="card">
+        <h3>🕺 Move & Dance</h3>
+        <div class="hint">ทำท่าตามลำดับและสะสมคะแนน</div>
+        <button class="btn" onclick="loadGame('dance/embed.html')">เปิดเกม</button>
+      </div>
+      <div class="card">
+        <h3>คำแนะนำสำหรับ Spatial</h3>
+        <ol class="hint">
+          <li>อัปโหลดทั้งโฟลเดอร์ขึ้นโฮสต์สาธารณะ</li>
+          <li>ใน Spatial วางจอ/ป้าย แล้วฝัง URL ของไฟล์นี้ (<code>hub/index.html</code>) หรือแต่ละ <code>embed.html</code></li>
+          <li>ชุดเกมส่งผลลัพธ์กลับด้วย <code>postMessage</code> (บันทึกได้ที่คอนโซลหรือเชื่อม API)</li>
+        </ol>
+      </div>
+    </div>
+    <div class="right">
+      <div class="framewrap">
+        <iframe id="stage" srcdoc="<html><body style='display:flex;align-items:center;justify-content:center;height:100%;background:#0b132b;color:#fff;font-family:system-ui'><div>เลือกเกมทางซ้ายเพื่อเริ่ม</div></body></html>"></iframe>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="hint">Event Log (จาก postMessage)</div>
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function loadGame(path){
+      document.getElementById('stage').src = path;
+      log('เปิดเกม: ' + path);
+    }
+    function log(msg){
+      const box = document.getElementById('log');
+      const ts = new Date().toLocaleTimeString();
+      box.textContent += `[${ts}] ${msg}\n`;
+      box.scrollTop = box.scrollHeight;
+    }
+    // รับผลลัพธ์จากแต่ละเกม
+    window.addEventListener('message', (e)=>{
+      if(!e.data) return;
+      log('postMessage: ' + JSON.stringify(e.data));
+    });
+  </script>
+</body>
+</html>

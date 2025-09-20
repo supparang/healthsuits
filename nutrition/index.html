@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Nutrition Shop – WebXR</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>body{margin:0;background:#000}</style>
+  <script>
+  const NS = { target:{grain:1,veg:1,fruit:1,protein:1,dairy:1}, picked:{grain:0,veg:0,fruit:0,protein:0,dairy:0}, done:false };
+  AFRAME.registerComponent('food-item',{schema:{group:{type:'string'},label:{type:'string'}},
+    init(){ this.isHeld=false; this.isOver=false; this.hold=0;
+      this.el.addEventListener('mouseenter',()=>{this.isOver=true;});
+      this.el.addEventListener('mouseleave',()=>{this.isOver=false; this.isHeld=false; this.hold=0;});},
+    tick(_,d){ if(NS.done)return; if(this.isOver&&!this.isHeld){ this.hold+=d; if(this.hold>800){ this.isHeld=true; this.el.setAttribute('material','color','#FFD54F'); } }
+      if(this.isHeld){ const cam=document.querySelector('[camera]'); const dir=new THREE.Vector3(); cam.object3D.getWorldDirection(dir);
+        const pos=cam.object3D.position.clone().add(dir.multiplyScalar(1.2)); this.el.object3D.position.copy(pos); }}});
+  AFRAME.registerComponent('plate-drop',{init(){ this.el.addEventListener('mouseenter',()=>this.over=true); this.el.addEventListener('mouseleave',()=>this.over=false); },
+    tick(){ if(!this.over)return; document.querySelectorAll('[food-item]').forEach(f=>{ const c=f.components['food-item']; if(c&&c.isHeld){ c.isHeld=false; f.setAttribute('material','color','#4CAF50');
+        const g=c.data.group; NS.picked[g]=(NS.picked[g]||0)+1; document.querySelector('#ui-progress').setAttribute('text','value',JSON.stringify(NS.picked));
+        let ok=true; Object.keys(NS.target).forEach(k=>{ if(NS.picked[k]<NS.target[k]) ok=false;}); if(ok&&!NS.done){ NS.done=true; document.querySelector('#ui-status').setAttribute('text','value','ครบ 5 หมู่แล้ว!'); parent&&parent.postMessage({type:'NUTRITION_COMPLETE',picked:NS.picked},'*'); }}}); }});
+  </script>
+</head>
+<body>
+  <a-scene renderer="antialias:true" embedded xr-mode-ui="enabled:true">
+    <a-entity position="0 1.6 0"><a-camera wasd-controls-enabled="false"><a-cursor></a-cursor></a-camera></a-entity>
+    <a-plane position="0 0 -2" rotation="-90 0 0" width="10" height="8" color="#fafafa"></a-plane>
+    <a-sky color="#1a237e"></a-sky>
+    <a-entity light="type: ambient; intensity: 0.9"></a-entity>
+    <a-entity id="hud" position="0 2 -2">
+      <a-entity id="ui-title" text="value:เลือกอาหารให้ครบ 5 หมู่; color:#fff; width:5" position="-2.2 0.6 0"></a-entity>
+      <a-entity id="ui-progress" text="value:{}; color:#80CBC4; width:5" position="-2.2 0.3 0"></a-entity>
+      <a-entity id="ui-status" text="value:; color:#FFEB3B; width:5" position="-2.2 0.0 0"></a-entity>
+    </a-entity>
+    <a-box position="-2 1.2 -2" width="3" height="1.5" depth="0.3" color="#8D6E63"></a-box>
+    <a-sphere position="-3 1.6 -1.8" radius="0.12" color="#FF7043" food-item="group:protein; label:ไข่"></a-sphere>
+    <a-box    position="-2.5 1.4 -1.85" depth="0.12" height="0.08" width="0.2" color="#A1887F" food-item="group:grain; label:ขนมปัง"></a-box>
+    <a-cylinder position="-2.2 1.5 -1.8" radius="0.07" height="0.12" color="#FFEE58" food-item="group:dairy; label:นม"></a-cylinder>
+    <a-sphere position="-1.8 1.6 -1.8" radius="0.11" color="#66BB6A" food-item="group:veg; label:ผัก"></a-sphere>
+    <a-sphere position="-1.5 1.55 -1.85" radius="0.1" color="#EF5350" food-item="group:fruit; label:ผลไม้"></a-sphere>
+    <a-cylinder position="1 1 -1.2" radius="0.35" height="0.03" color="#CFD8DC" plate-drop></a-cylinder>
+    <a-text value="นำอาหารมาวางบนจาน" color="#FFFFFF" width="3" position="0.2 1.3 -1.2"></a-text>
+  </a-scene>
+</body>
+</html>
