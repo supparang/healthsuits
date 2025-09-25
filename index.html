@@ -1,4 +1,3 @@
-<!doctype html>
 <html lang="th">
 <head>
 <meta charset="utf-8" />
@@ -40,48 +39,5 @@
 
 <!-- Camera rig -->
 <a-entity id="rig" position="0 1.6 3">
-<a-entity camera look-controls wasd-controls></a-entity>
-<a-entity id="cursor" cursor="fuse: true; fuseTimeout: 900" position="0 0 -1" geometry="primitive: ring; radiusInner: 0.005; radiusOuter: 0.008" material="color: #222; shader: flat"></a-entity>
-<!-- MENU (ย้ายให้เป็นลูกของกล้อง เพื่อให้โผล่ตรงหน้าเสมอ) -->
-<a-entity id="menu" position="0 0 -1.2" visible="true">
-<a-entity text="value: 🧒 เกมสุขภาพ ป.5 (WebXR); align: center; width: 2.8; color: #0a2540" position="0 0.52 0"></a-entity>
-
-
-<!-- Difficulty selector -->
-<a-entity text="value: เลือกระดับความยาก; align: center; width: 2.2; color: #333" position="0 0.28 0"></a-entity>
-<a-entity id="diff-easy" geometry="primitive: plane; width: 0.8; height: .24" material="color: #E6FFFA" position="-0.9 0.05 0" class="clickable"></a-entity>
-<a-entity text="value: ง่าย; align: center; width: 1; color: #0b4" position="-0.9 0.05 0.01"></a-entity>
-<a-entity id="diff-normal" geometry="primitive: plane; width: 0.8; height: .24" material="color: #EEF2FF" position="0 0.05 0" class="clickable"></a-entity>
-<a-entity text="value: ปกติ; align: center; width: 1; color: #04b" position="0 0.05 0.01"></a-entity>
-<a-entity id="diff-hard" geometry="primitive: plane; width: 0.8; height: .24" material="color: #FFF1F2" position="0.9 0.05 0" class="clickable"></a-entity>
-<a-entity text="value: ยาก; align: center; width: 1; color: #b04" position="0.9 0.05 0.01"></a-entity>
-
-
-<!-- Mode buttons -->
-<a-entity id="btn-hygiene" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 -0.2 0" class="clickable"></a-entity>
-<a-entity text="value: 🧼 Handwash Hero; align: center; width: 2.4; color: #111" position="0 -0.2 0.01"></a-entity>
-
-
-<a-entity id="btn-nutrition" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 -0.5 0" class="clickable"></a-entity>
-<a-entity text="value: 🥗 Rainbow Plate; align: center; width: 2.4; color: #111" position="0 -0.5 0.01"></a-entity>
-
-
-<a-entity id="btn-fitness" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 -0.8 0" class="clickable"></a-entity>
-<a-entity text="value: 🏃 Move Quest; align: center; width: 2.4; color: #111" position="0 -0.8 0.01"></a-entity>
-
-
-<a-entity text="value: แตะ/จ้อง/บีบมือ (pinch) เพื่อเลือก; align: center; width: 2; color: #333" position="0 -1.1 0"></a-entity>
-</a-entity>
-</a-entity>
-
-
-<!-- Controllers (ray) -->
-<a-entity id="rightHand" laser-controls="hand: right"></a-entity>
-<a-entity laser-controls="hand: left"></a-entity>
-
-
-<!-- HANDS (WebXR Hands) + pinch raycaster -->
-<a-entity id="handL" hand-tracking-controls="hand: left"></a-entity>
-<a-entity id="handR" hand-tracking-controls="hand: right"></a-entity>
-<a-entity id="handRay" raycaster="objects: .clickable; far: 2" line="opacity: 0.0"></a-entity>
+<a-entity id="cam" camera cursor="fuse: true; fuseTimeout: 900" raycaster="objects: .clickable; far: 3" look-controls wasd-controls></a-entity>
 </html>
