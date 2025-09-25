@@ -17,55 +17,20 @@
     </a-entity>
 
     <!-- HUD -->
-    <a-entity id="hudState" position="0 1.7 -1.2" 
+    <a-entity id="hudState" position="0 1.7 -1.2"
               text="value:โหมด: menu; color:#FFF; align:center; width:2"></a-entity>
+    <a-entity id="hudScore" position="0 1.52 -1.2"
+              text="value:คะแนน: 0; color:#FFF; align:center; width:2"></a-entity>
+    <a-entity id="hudTime" position="0 1.34 -1.2"
+              text="value:เวลา: 0s; color:#FFF; align:center; width:2"></a-entity>
 
     <a-sky color="#224466"></a-sky>
-    <a-plane position="0 0 -2" rotation="-90 0 0" 
-             width="20" height="20" color="#334455"></a-plane>
+    <a-plane position="0 0 -2" rotation="-90 0 0" width="20" height="20" color="#334455"></a-plane>
 
     <!-- เมนูหลัก -->
     <a-entity id="grp_menu" visible="true" position="0 1.3 -1.2">
-      <a-entity position="0 0 0" 
+      <a-entity position="0 0 0"
                 text="value:เลือกมินิเกม; color:#FFF; align:center; width:2"></a-entity>
 
-      <a-box position="0 -0.5 0" depth="0.1" height="0.25" width="0.8" 
-             color="#66CDAA" onclick="goMode('hygiene')">
-        <a-entity position="0 0 0.06" 
-                  text="value:อนามัยส่วนบุคคล; align:center; width:1.6"></a-entity>
-      </a-box>
-
-      <a-box position="0 -1.0 0" depth="0.1" height="0.25" width="0.8" 
-             color="#FFD166" onclick="goMode('nutrition')">
-        <a-entity position="0 0 0.06" 
-                  text="value:โภชนาการ; align:center; width:1.6"></a-entity>
-      </a-box>
-
-      <a-box position="0 -1.5 0" depth="0.1" height="0.25" width="0.8" 
-             color="#4CC9F0" onclick="goMode('exercise')">
-        <a-entity position="0 0 0.06" 
-                  text="value:การออกกำลังกาย; align:center; width:1.6"></a-entity>
-      </a-box>
-    </a-entity>
-
-    <!-- ฉากย่อย -->
-    <a-entity id="grp_hygiene" visible="false">
-      <a-entity position="0 1.2 -1.2" 
-                text="value:เกมอนามัย (ล้างมือ); width:2; align:center"></a-entity>
-    </a-entity>
-
-    <a-entity id="grp_nutrition" visible="false">
-      <a-entity position="0 1.2 -1.2" 
-                text="value:เกมโภชนาการ (แยกอาหาร); width:2; align:center"></a-entity>
-    </a-entity>
-
-    <a-entity id="grp_exercise" visible="false">
-      <a-entity position="0 1.2 -1.2" 
-                text="value:เกมออกกำลังกาย (ทำท่า); width:2; align:center"></a-entity>
-    </a-entity>
-
-    <a-entity light="type: ambient; intensity: 0.7"></a-entity>
-    <a-entity light="type: directional; intensity: 0.6" position="1 3 2"></a-entity>
-  </a-scene>
-</body>
-</html>
+      <a-box class="clickable" position="0 -0.5 0" depth="0.1" height="0.25" width="0.8"
+             color="#66CDAA" oncli
