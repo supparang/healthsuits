@@ -1,4 +1,11 @@
 <!doctype html>
+<!-- Mode buttons -->
+<a-entity id="btn-hygiene" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 -0.2 0" class="clickable"></a-entity>
+<a-entity text="value: 🧼 Handwash Hero; align: center; width: 2.4; color: #111" position="0 -0.2 0.01"></a-entity>
+
+
+<a-entity id="btn-nutrition" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 -0.5 0" class="clickable"></a-entity>
+<a-entity text="value: 🥗 Rainbow Plate; align: center; width: 2.4; color: #111" position="0 -0.5 0.01"></a-entity>
 
 
 <a-entity id="btn-fitness" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 -0.8 0" class="clickable"></a-entity>
@@ -33,7 +40,10 @@
 </a-scene>
 
 
-<!-- HTML Fallback Menu (always on top) -->
+<div id="dbg">ready…</div>
+
+
+<!-- HTML Fallback Menu (always on top) --> (always on top) -->
 <div id="menuOverlay" class="menu-overlay">
 <div class="menu-card">
 <h1>🧒 เมนูเกมสุขภาพ ป.5</h1>
@@ -47,7 +57,10 @@
 <button class="menu-btn nut" id="ov-nut">🥗 จานสีรุ้งโภชนาการ</button>
 <button class="menu-btn fit" id="ov-fit">🏃 ภารกิจขยับร่างกาย</button>
 </div>
-<small>เคล็ดลับ: แตะ/จ้อง/บีบนิ้ว (pinch) ก็ได้</small>
+<small>เคล็ดลับ: แตะ/จ้อง/บีบนิ้ว (pinch) ก็ได้ • หากปุ่ม 3D ไม่ขึ้น ใช้ปุ่มด้านบนนี้ได้เลย</small>
+<div class="menu-row">
+<button class="menu-btn" id="ov-quick">▶ เริ่มโหมดล้างมือทันที</button>
+</div>
 </div>
 </div>
 
