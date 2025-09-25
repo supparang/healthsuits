@@ -1,10 +1,10 @@
 /* ===== Global text sizes (meters) – ปรับตรงนี้ทีเดียวทั้งเกม ===== */
 const TEXT_SIZE = {
   hud:    0.034,
-  title:  0.036,
-  hint:   0.032,
-  label:  0.032,
-  button: 0.034
+  title:  0.01,
+  hint:   0.01,
+  label:  0.01,
+  button: 0.01
 };
 
 /* ===== Helpers: troika-text compatible creator ===== */
