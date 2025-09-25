@@ -1,10 +1,10 @@
-/* ===== ขนาดตัวอักษร (เมตร) — เวอร์ชันเล็กมากสำหรับมือถือ ===== */
+/* ===== ขนาดตัวอักษร (เมตร) — เล็กมากสำหรับมือถือ ===== */
 const TEXT_SIZE = {
-  hud:    0.016,
-  title:  0.018,
-  hint:   0.015,
-  label:  0.015,
-  button: 0.016
+  hud:    0.010,  // เคย 0.016 → เล็กลงอีก
+  title:  0.012,
+  hint:   0.010,
+  label:  0.010,
+  button: 0.011
 };
 
 /* ===== Helpers: troika-text compatible ===== */
@@ -38,8 +38,38 @@ AFRAME.registerComponent('ensure-cursor', {
     if (!cam) return;
     // เดสก์ท็อป: ใช้เมาส์
     cam.setAttribute('cursor', 'rayOrigin: mouse');
-    cam.setAttribute('raycaster', 'objects: .clickable, [troika-text]; far: 20');
-    // มือถือ: มีรีทิเคิลใน index.html แล้ว (id=reticle)
+    cam.setAttribute('raycaster', 'objects: .clickable, [troika-text]; far: 30');
+    // มือถือใช้ reticle (rayOrigin: entity) ที่ index.html แล้ว
+  }
+});
+
+/* ===== แตะหน้าจอ = คลิกที่วัตถุที่ reticle เล็งอยู่ (Android fix) ===== */
+AFRAME.registerComponent('tap-to-click', {
+  init(){
+    const cam = document.querySelector('#camera');
+    const cursor = cam && cam.querySelector('#reticle');
+    const fire = () => {
+      if (!cursor) return;
+      const rc = cursor.components.raycaster;
+      if (!rc) return;
+      const inter = rc.intersections && rc.intersections[0];
+      if (inter && inter.object && inter.object.el) {
+        // ยิง click ที่ element เป้าหมาย
+        inter.object.el.emit('click');
+        // เผื่อป้ายตัวหนังสืออยู่บนกล่อง ให้ยิงไปที่พาเรนต์ด้วย
+        inter.object.el.parentEl && inter.object.el.parentEl.emit('click');
+      }
+    };
+    // Android Chrome จะส่งทั้ง touchend และ click → ยิงครั้งเดียวพอ
+    let lock = false, t = 0;
+    const once = () => {
+      const now = performance.now();
+      if (lock && now - t < 250) return;
+      lock = true; t = now; fire();
+      setTimeout(()=>lock=false, 200);
+    };
+    this.el.addEventListener('touchend', once, {passive:true});
+    this.el.addEventListener('click', once);
   }
 });
 
@@ -57,7 +87,7 @@ AFRAME.registerComponent('fontsize-apply', {
     };
     setFS('#hudState', TEXT_SIZE.hud);
     setFS('#hudScore', TEXT_SIZE.hud);
-    setFS('#hudTime', TEXT_SIZE.hud);
+    setFS('#hudTime',  TEXT_SIZE.hud);
     setFS('#grp_menu [troika-text]', TEXT_SIZE.button);
   }
 });
@@ -159,7 +189,7 @@ const HygieneGame = (function(){
   let hintText=null, titleText=null, chooser=null;
 
   function buildDifficultyChooser(){
-    chooser = el('a-entity', {position:'0 1.35 -1.15'});
+    chooser = el('a-entity', {position:'0 1.30 -1.6'});
     chooser.appendChild(el('a-entity', {
       text:`value:เลือกความยาก; color:#FFFFFF; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`
     }));
@@ -169,7 +199,7 @@ const HygieneGame = (function(){
       {x: 0.6, key:'hard',   label:'ยาก',  color:'#EF476F'}
     ];
     defs.forEach(d=>{
-      const btn = el('a-box', {class:'clickable', position:`${d.x} -0.25 0`, width:0.6, height:0.18, depth:0.08, color:d.color}, [
+      const btn = el('a-box', {class:'clickable', position:`${d.x} -0.25 0`, width:0.6, height:0.16, depth:0.08, color:d.color}, [
         el('a-entity', {position:'0 0 0.06',
           text:`value:${d.label}; anchor:center; maxWidth:1.3; fontSize: ${TEXT_SIZE.button}`})
       ]);
@@ -186,7 +216,7 @@ const HygieneGame = (function(){
   function makeTarget(pos, text, key, radius, holdMs){
     const wrap = el('a-entity', {position:pos});
     const plate = el('a-circle', {radius:radius, color:'#88E0FF', class:'clickable'});
-    const label = el('a-entity', {position:'0 -0.20 0',
+    const label = el('a-entity', {position:'0 -0.18 0',
       text:`value:${text}; anchor:center; maxWidth:2; color:#FFFFFF; fontSize: ${TEXT_SIZE.label}`});
     wrap.appendChild(plate); wrap.appendChild(label);
 
@@ -206,7 +236,7 @@ const HygieneGame = (function(){
       if (steps[idx].key===key){
         sys.addScore(DIFF[diffKey].scoreAdd);
         sys.timeLeft += DIFF[diffKey].timeBonus;
-        plate.setAttribute('animation__pop', {property:'scale', to:'1.3 1.3 1.3', dur:120, dir:'alternate', loop:1});
+        plate.setAttribute('animation__pop', {property:'scale', to:'1.25 1.25 1.25', dur:120, dir:'alternate', loop:1});
         idx++; updateHighlight();
         if (idx>=steps.length) sys.endGame('สะอาดหมดจด!');
       } else {
@@ -249,15 +279,15 @@ const HygieneGame = (function(){
     steps = BASE_STEPS.slice(); if (DIFF[diffKey].shuffle) steps = shuffle(steps);
     idx = 0;
 
-    titleText = el('a-entity', {position:'0 1.1 -1.2',
+    titleText = el('a-entity', {position:'0 1.1 -1.6',
       text:`value:ล้างมือให้ครบลำดับ — เล็งวงสีเขียว; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
-    hintText  = el('a-entity', {position:'0 0.95 -1.2',
+    hintText  = el('a-entity', {position:'0 0.95 -1.6',
       text:`value:แตะ/กดค้างที่เป้า (ยากจะต้องค้างนานขึ้น); anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hint}`});
     group.appendChild(titleText); group.appendChild(hintText);
 
     const positions = [
-      ' -0.6 1.45 -1.2',' -0.2 1.45 -1.2',' 0.2 1.45 -1.2',
-      ' 0.6 1.45 -1.2',' -0.4 1.15 -1.2',' 0.0 1.15 -1.2',' 0.4 1.15 -1.2'
+      ' -0.6 1.45 -1.6',' -0.2 1.45 -1.6',' 0.2 1.45 -1.6',
+      ' 0.6 1.45 -1.6',' -0.4 1.15 -1.6',' 0.0 1.15 -1.6',' 0.4 1.15 -1.6'
     ];
     const cfg = DIFF[diffKey];
     targets = steps.map((s,i)=> makeTarget(positions[i], s.label, s.key, cfg.radius, cfg.holdMs));
@@ -266,7 +296,7 @@ const HygieneGame = (function(){
     for (let i=0;i<(cfg.distractors||0);i++){
       const x = -0.8 + Math.random()*1.6;
       const y =  1.0 + Math.random()*0.6;
-      group.appendChild(makeDistractor(`${x.toFixed(2)} ${y.toFixed(2)} -1.2`));
+      group.appendChild(makeDistractor(`${x.toFixed(2)} ${y.toFixed(2)} -1.6`));
     }
     updateHighlight();
   }
@@ -301,10 +331,10 @@ const NutritionGame = (function(){
   let group=null, qText=null, current=null, asked=0, maxQ=10;
 
   function makeChoice(x, label, cat){
-    const btn = el('a-box', {class:'clickable', position:`${x} 0.6 -1.1`,
-      width:0.65, height:0.18, depth:0.08, color:'#3A86FF'});
+    const btn = el('a-box', {class:'clickable', position:`${x} 0.6 -1.55`,
+      width:0.65, height:0.16, depth:0.08, color:'#3A86FF'});
     btn.appendChild(el('a-entity',{position:'0 0 0.06',
-      text:`value:${label}; anchor:center; maxWidth:1.5; fontSize: ${TEXT_SIZE.button}`}));
+      text:`value:${label}; anchor:center; maxWidth:1.4; fontSize: ${TEXT_SIZE.button}`}));
     btn.addEventListener('click', ()=>{
       const sys = $('a-scene').systems.gameflow;
       if (!current) return;
@@ -330,9 +360,9 @@ const NutritionGame = (function(){
   return {
     start(){
       group = $('#grp_nutrition'); group.innerHTML = '';
-      qText = el('a-entity',{position:'0 1.15 -1.2',
+      qText = el('a-entity',{position:'0 1.15 -1.6',
         text:`value:จัดหมวด: ...; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
-      const hintText = el('a-entity',{id:'grp_nutrition_hint', position:'0 0.95 -1.2',
+      const hintText = el('a-entity',{id:'grp_nutrition_hint', position:'0 0.95 -1.6',
         text:`value:แตะเลือกหมวดให้ถูกต้อง; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hint}`});
       group.appendChild(qText); group.appendChild(hintText);
       const xs = [-0.9, -0.45, 0, 0.45, 0.9];
@@ -348,7 +378,7 @@ const NutritionGame = (function(){
    ========================= */
 const ExerciseGame = (function(){
   const TARGET_POS = [
-    '-0.5 1.4 -1.0','0.5 1.4 -1.0','0 1.8 -1.0','-0.3 1.2 -1.0','0.3 1.2 -1.0'
+    '-0.5 1.4 -1.55','0.5 1.4 -1.55','0 1.8 -1.55','-0.3 1.2 -1.55','0.3 1.2 -1.55'
   ];
   const POSES = [
     {name:'Jumping Jacks', seq:[0,1,2,0,1,2]},
@@ -358,7 +388,7 @@ const ExerciseGame = (function(){
   let group=null, info=null, markers=[], poseIdx=0, stepIdx=0, handCheckInterval=null;
 
   function makeMarker(posStr, idx){
-    const m = el('a-sphere', {class:'clickable', position:posStr, radius:0.1, color:'#FFD166'});
+    const m = el('a-sphere', {class:'clickable', position:posStr, radius:0.09, color:'#FFD166'});
     m.addEventListener('click', ()=> hit(idx));
     return m;
   }
@@ -375,7 +405,7 @@ const ExerciseGame = (function(){
       return;
     }
     sys.addScore(3);
-    markers[i].setAttribute('animation__pop', {property:'scale', to:'1.25 1.25 1.25', dur:100, dir:'alternate', loop:1});
+    markers[i].setAttribute('animation__pop', {property:'scale', to:'1.2 1.2 1.2', dur:100, dir:'alternate', loop:1});
     stepIdx++;
     if (stepIdx>=POSES[poseIdx].seq.length){
       poseIdx++; stepIdx=0;
@@ -399,7 +429,7 @@ const ExerciseGame = (function(){
   return {
     start(){
       group = $('#grp_exercise'); group.innerHTML = '';
-      info = el('a-entity',{position:'0 1.05 -1.1',
+      info = el('a-entity',{position:'0 1.05 -1.6',
         text:`value:ทำตามเป้าให้ทันเวลา; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
       group.appendChild(info);
       markers = TARGET_POS.map((p,i)=> makeMarker(p, i));
