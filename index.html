@@ -3,30 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <title>Health3 VR — Spatial/WebXR</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1"/>
   <!-- A-Frame core -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
   <!-- Troika (รองรับภาษาไทย) -->
   <script src="https://unpkg.com/troika-three-text/dist/troika-three-text.umd.js"></script>
   <script src="https://unpkg.com/aframe-troika-text/dist/aframe-troika-text.min.js"></script>
-
   <!-- Game logic -->
   <script src="script.js"></script>
 </head>
 <body>
-  <!-- เพิ่ม fontsize-apply และ ensure-cursor -->
+  <!-- เปิด fontsize-apply + ensure-cursor -->
   <a-scene renderer="antialias: true" tick-timer hand-gestures ensure-cursor fontsize-apply>
     <!-- กล้อง + ตัวชี้ -->
     <a-entity id="rig">
-      <a-entity id="camera" camera look-controls position="0 1.6 0"></a-entity>
+      <a-entity id="camera" camera look-controls position="0 1.6 0">
+        <!-- รีทิเคิลสำหรับมือถือ: แตะที่จุดกลางหน้าจอ -->
+        <a-entity id="reticle"
+                  cursor="rayOrigin: entity; fuse: false"
+                  raycaster="objects: .clickable, [troika-text]; far: 20"
+                  geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.005"
+                  material="color: #FFFFFF; shader: flat; opacity: 0.9"
+                  position="0 0 -1"></a-entity>
+      </a-entity>
       <a-entity laser-controls="hand: right"></a-entity>
       <a-entity id="handRight" hand-tracking-controls="hand: right"></a-entity>
       <a-entity hand-tracking-controls="hand: left"></a-entity>
     </a-entity>
 
-    <!-- HUD (ปล่อยให้ script กำหนด fontSize) -->
+    <!-- HUD (ไม่ใส่ fontSize ปล่อยให้ script จัดการ) -->
     <a-entity id="hudState" position="0 1.70 -1.2"
               troika-text="value:โหมด: menu; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
     <a-entity id="hudScore" position="0 1.52 -1.2"
@@ -43,22 +48,22 @@
       <a-entity position="0 0 0"
                 troika-text="value:เลือกมินิเกม; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
 
-      <a-box class="clickable" position="0 -0.5 0" depth="0.1" height="0.25" width="0.9"
+      <a-box class="clickable" position="0 -0.5 0" depth="0.1" height="0.22" width="0.9"
              color="#06D6A0" onclick="goMode('hygiene')">
         <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:อนามัยส่วนบุคคล; anchor: center; maxWidth: 1.8"></a-entity>
+                  troika-text="value:อนามัยส่วนบุคคล; anchor: center; maxWidth: 1.6"></a-entity>
       </a-box>
 
-      <a-box class="clickable" position="0 -1.0 0" depth="0.1" height="0.25" width="0.9"
+      <a-box class="clickable" position="0 -1.0 0" depth="0.1" height="0.22" width="0.9"
              color="#FFD166" onclick="goMode('nutrition')">
         <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:โภชนาการ; anchor: center; maxWidth: 1.8"></a-entity>
+                  troika-text="value:โภชนาการ; anchor: center; maxWidth: 1.6"></a-entity>
       </a-box>
 
-      <a-box class="clickable" position="0 -1.5 0" depth="0.1" height="0.25" width="0.9"
+      <a-box class="clickable" position="0 -1.5 0" depth="0.1" height="0.22" width="0.9"
              color="#4CC9F0" onclick="goMode('exercise')">
         <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:การออกกำลังกาย; anchor: center; maxWidth: 1.8"></a-entity>
+                  troika-text="value:การออกกำลังกาย; anchor: center; maxWidth: 1.6"></a-entity>
       </a-box>
     </a-entity>
 
