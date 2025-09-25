@@ -1,17 +1,17 @@
-/* ===== Global text sizes (meters) – ปรับตรงนี้ทีเดียวทั้งเกม ===== */
+/* ===== Global text sizes (meters) – ลดลงแบบชัดเจน ===== */
 const TEXT_SIZE = {
-  hud:    0.034,
-  title:  0.01,
-  hint:   0.01,
-  label:  0.01,
-  button: 0.01
+  hud:    0.024,  // เดิม 0.034
+  title:  0.026,  // เดิม 0.036
+  hint:   0.022,  // เดิม 0.032
+  label:  0.022,  // เดิม 0.032
+  button: 0.024   // เดิม 0.034
 };
 
 /* ===== Helpers: troika-text compatible creator ===== */
 function $(sel){ return document.querySelector(sel); }
 
 function setAttrCompat(element, name, value){
-  // แปลง A-Frame text → troika-text (รองรับภาษาไทย) + อัด fontSize ถ้ายังไม่กำหนด
+  // แปลง A-Frame text → troika-text (รองรับไทย) + เติม fontSize ถ้าไม่กำหนด
   if (name === 'text') {
     let s = String(value)
       .replace(/(^|;)\s*align\s*:/g, '$1 anchor:')
@@ -37,18 +37,19 @@ function el(tag, attrs={}, children=[]){
   return e;
 }
 
-/* ===== Desktop cursor/raycaster ===== */
+/* ===== Desktop cursor/raycaster (แก้ให้คลิกโดนทั้งปุ่มและข้อความ) ===== */
 AFRAME.registerComponent('ensure-cursor', {
   init(){
     const cam = $('#camera');
     if (cam){
       cam.setAttribute('cursor', 'rayOrigin: mouse');
-      cam.setAttribute('raycaster', 'objects: .clickable; far: 20');
+      // เดิม objects: .clickable → เปลี่ยนให้ครอบคลุมข้อความ troika ด้วย
+      cam.setAttribute('raycaster', 'objects: .clickable, [troika-text]; far: 20');
     }
   }
 });
 
-/* ===== Force-apply font sizes on HTML labels (วิธี B) ===== */
+/* ===== Force-apply font sizes on HTML labels ===== */
 AFRAME.registerComponent('fontsize-apply', {
   init(){
     const setFS = (selector, size)=>{
@@ -64,7 +65,7 @@ AFRAME.registerComponent('fontsize-apply', {
     setFS('#hudState', TEXT_SIZE.hud);
     setFS('#hudScore', TEXT_SIZE.hud);
     setFS('#hudTime', TEXT_SIZE.hud);
-    // ป้ายทั้งหมดในเมนู
+    // ป้ายในเมนู
     setFS('#grp_menu [troika-text]', TEXT_SIZE.button);
   }
 });
