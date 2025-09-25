@@ -48,6 +48,27 @@ AFRAME.registerComponent('ensure-cursor', {
   }
 });
 
+/* ===== Force-apply font sizes on HTML labels (วิธี B) ===== */
+AFRAME.registerComponent('fontsize-apply', {
+  init(){
+    const setFS = (selector, size)=>{
+      document.querySelectorAll(selector).forEach(el=>{
+        const t = el.getAttribute('troika-text') || '';
+        const t2 = /fontSize\s*:/.test(t)
+          ? t.replace(/fontSize\s*:\s*[0-9.]+/, `fontSize: ${size}`)
+          : (t ? `${t}; fontSize: ${size}` : `fontSize: ${size}`);
+        el.setAttribute('troika-text', t2);
+      });
+    };
+    // HUD
+    setFS('#hudState', TEXT_SIZE.hud);
+    setFS('#hudScore', TEXT_SIZE.hud);
+    setFS('#hudTime', TEXT_SIZE.hud);
+    // ป้ายทั้งหมดในเมนู
+    setFS('#grp_menu [troika-text]', TEXT_SIZE.button);
+  }
+});
+
 /* ===== Core Gameflow ===== */
 AFRAME.registerSystem('gameflow', {
   init(){
@@ -246,7 +267,7 @@ const HygieneGame = (function(){
       `value:ล้างมือให้ครบลำดับ — ขั้นต่อไป: ${next}; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`);
   }
 
-  let targets=[];
+  let targets=[], titleText=null, hintText=null;
   function startRound(){
     group.innerHTML = '';
 
@@ -277,13 +298,14 @@ const HygieneGame = (function(){
     updateHighlight();
   }
 
-  let titleText=null, hintText=null;
+  let groupRef=null;
   return {
     start(){
       group = $('#grp_hygiene');
       group.innerHTML = '';
       buildDifficultyChooser();
-      return { stop(){ group && (group.innerHTML=''); } };
+      groupRef = group;
+      return { stop(){ groupRef && (groupRef.innerHTML=''); } };
     }
   };
 })();
