@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <title>Hygiene Hero – WebXR (Spatial)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Hygiene Hero: เกมอนามัยส่วนบุคคลสำหรับ ป.5 รองรับ WebXR + Hand Tracking (pinch/wave), พร้อมใช้งานกับ Spatial.io" />
+  <style>
+    :root { --glass: rgba(255,255,255,0.9); }
+    html, body { height:100%; }
+    body { margin:0; overflow:hidden; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans Thai', sans-serif;}
+    .hud { position:fixed; z-index:10; background:var(--glass); padding:8px 12px; border-radius:12px; box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+    #topLeft { top:12px; left:12px; display:flex; align-items:center; gap:10px; }
+    #bottomRight { right:12px; bottom:12px; font-size:12px; }
+    #start { padding:6px 10px; border-radius:8px; border:1px solid #888; cursor:pointer; }
+    .tag { padding:4px 8px; border-radius:999px; background:#eaf7ff; color:#036; font-weight:600; }
+    .hidden { display:none; }
+    #toast { position:fixed; left:50%; transform:translateX(-50%); bottom:20px; background:var(--glass); padding:8px 12px; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,.12); transition:opacity .25s; opacity:0;}
+    #toast.show { opacity:1; }
+    #overlayEnd { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.4); z-index:20; }
+    #cardEnd { background:#fff; border-radius:16px; padding:18px 20px; width:min(92vw, 480px); text-align:center; box-shadow:0 20px 40px rgba(0,0,0,.25); }
+    #cardEnd h2 { margin:8px 0 12px; }
+    #cardEnd button { padding:10px 14px; border-radius:10px; border:1px solid #555; cursor:pointer; }
+    #legend { position:fixed; right:12px; top:12px; background:var(--glass); padding:8px 10px; border-radius:12px; font-size:12px; line-height:1.6; }
+    #legend b { display:inline-block; min-width:3.5em; }
+    a { color:#0a58ca; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div id="topLeft" class="hud">
+    <button id="start">Enter VR / Start</button>
+    <span id="score" class="tag">Score: 0</span>
+    <span id="left" class="tag">Left: 10</span>
+    <span id="hintTag" class="tag">wave = hint</span>
+  </div>
+  <div id="legend">
+    <div><b>ควบคุม:</b> pinch = หยิบ/ปล่อย, wave = คำใบ้</div>
+    <div><b>เป้าหมาย:</b> คัดแยกการ์ด “ถูกสุขลักษณะ/ไม่ถูก”</div>
+    <div><b>Spatial:</b> ฝังลิงก์หน้านี้ในสเปซของคุณ</div>
+  </div>
+  <div id="bottomRight" class="hud">Hygiene Hero • WebXR • Spatial-ready</div>
+  <div id="toast"></div>
+
+  <div id="overlayEnd" class="hidden">
+    <div id="cardEnd">
+      <h2>สรุปผล – Hygiene Hero</h2>
+      <p id="endSummary">คุณทำได้ 0 คะแนน</p>
+      <button id="restartBtn">เล่นอีกครั้ง</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js";
+    import { VRButton } from "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/webxr/VRButton.js";
+    import { XRControllerModelFactory } from "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/webxr/XRControllerModelFactory.js";
+    import { HandGestureManager } from "./HandGestureManager.js";
+
+    // ---- Game data (10 cards) ----
+    const CARDS = [
+      { label: "ล้างมือก่อนกินข้าว", type: "good" },
+      { label: "แปรงฟันก่อนนอน", type: "good" },
+      { label: "ใช้แก้วน้ำร่วมกัน", type: "bad" },
+      { label: "เปลี่ยนเสื้อผ้าหลังเล่นกีฬา", type: "good" },
+      { label: "ไม่อาบน้ำหลายวัน", type: "bad" },
+      { label: "ตัดเล็บให้สั้นเสมอ", type: "good" },
+      { label: "ไอ/จามไม่ปิดปาก", type: "bad" },
+      { label: "ล้างมือหลังเข้าห้องน้ำ", type: "good" },
+      { label: "ใช้ผ้าเช็ดหน้าร่วมกับเพื่อน", type: "bad" },
+      { label: "ทำความสะอาดรองเท้าเป็นประจำ", type: "good" },
+    ];
+
+    // ---- State ----
+    let renderer, scene, camera, hgm;
+    let reticle, grabbed = null;
+    let bins = [];
+    let cards = [];
+    let remaining = CARDS.length;
+    let score = 0;
+    const scoreEl = document.getElementById('score');
+    const leftEl = document.getElementById('left');
+    const startBtn = document.getElementById('start');
+    const toastEl = document.getElementById('toast');
+    const overlayEnd = document.getElementById('overlayEnd');
+    const summaryEl = document.getElementById('endSummary');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // ---- Init ----
+    init();
+    function init(){
+      renderer = new THREE.WebGLRenderer({ antialias:true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.xr.enabled = true;
+      renderer.xr.setReferenceSpaceType('local-floor');
+      document.body.appendChild(renderer.domElement);
+
+      document.body.appendChild(VRButton.createButton(renderer));
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf0fbff);
+      camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 50);
+
+      // Lights
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+      hemi.position.set(0, 2, 0);
+      scene.add(hemi);
+      const dir = new THREE.DirectionalLight(0xffffff, .7);
+      dir.position.set(2,3,1);
+      scene.add(dir);
+
+      // Floor
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(20,20),
+        new THREE.MeshPhongMaterial({ color: 0xe9f7ef })
+      );
+      ground.rotation.x = -Math.PI/2;
+      ground.position.y = 0;
+      scene.add(ground);
+
+      // Title billboard
+      const title = makeBillboard("Hygiene Hero\nคัดแยกพฤติกรรมอนามัยส่วนบุคคล");
+      title.position.set(0, 1.6, -2.4);
+      scene.add(title);
+
+      // Bins: ถูก / ผิด
+      const binGood = makeBin("ถูก", 0x72d572);
+      binGood.position.set(-1.1, 0.38, -2.0);
+      scene.add(binGood); bins.push(binGood);
+      const binBad = makeBin("ผิด", 0xff8080);
+      binBad.position.set( 1.1, 0.38, -2.0);
+      scene.add(binBad); bins.push(binBad);
+
+      // Cards
+      layoutCards();
+
+      // Reticle
+      reticle = new THREE.Mesh(
+        new THREE.RingGeometry(0.01, 0.015, 32),
+        new THREE.MeshBasicMaterial({ color:0x333333, side:THREE.DoubleSide })
+      );
+      reticle.position.set(0, 1.5, -0.8);
+      reticle.lookAt(new THREE.Vector3(0,1.5,-2));
+      scene.add(reticle);
+
+      // Controller models (fallback)
+      const controllerModelFactory = new XRControllerModelFactory();
+      for(let i=0;i<2;i++){
+        const grip = renderer.xr.getControllerGrip(i);
+        grip.add(controllerModelFactory.createControllerModel(grip));
+        scene.add(grip);
+      }
+
+      // Hand gestures
+      hgm = new HandGestureManager(renderer.xr);
+      hgm.on('pinchstart', ({hand}) => { grabbed = pickNearestCard(); });
+      hgm.on('pinchend', ({hand}) => {
+        if (!grabbed) return;
+        const ok = dropIntoNearestBin(grabbed);
+        if (ok !== null) {
+          // Scored and removed
+          if (ok) addScore(10), showToast("เยี่ยม! +10");
+          else showToast("ยังไม่ถูก ลองใหม่อีกครั้ง");
+          remaining--;
+          leftEl.textContent = "Left: " + remaining;
+          if (remaining <= 0) endGame();
+        }
+        grabbed = null;
+      });
+      hgm.on('wave', ({hand}) => highlightHints());
+
+      // Resize
+      window.addEventListener('resize', onResize);
+      function onResize(){
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      renderer.setAnimationLoop((t, frame) => {
+        if (frame) hgm.update(frame);
+        if (grabbed) {
+          // follow reticle
+          grabbed.position.lerp(reticle.getWorldPosition(new THREE.Vector3()), 0.35);
+        }
+        renderer.render(scene, camera);
+      });
+
+      startBtn.addEventListener('click', async () => {
+        if (!navigator.xr) { alert("เบราว์เซอร์ไม่รองรับ WebXR"); return; }
+        const session = await navigator.xr.requestSession('immersive-vr', {
+          optionalFeatures: ['local-floor','hand-tracking','layers']
+        });
+        await renderer.xr.setSession(session);
+      });
+
+      restartBtn.addEventListener('click', () => {
+        resetGame();
+      });
+    }
+
+    // ---- Game helpers ----
+    function layoutCards(){
+      // Clear any existing
+      for (const c of cards) scene.remove(c);
+      cards = [];
+      remaining = CARDS.length;
+      leftEl.textContent = "Left: " + remaining;
+
+      // grid layout in a shelf
+      const baseZ = -1.2, baseY = 1.2;
+      const cols = 5, gapX = 0.45, gapY = 0.26;
+      CARDS.forEach((item, i) => {
+        const card = makeCard(item.label, item.type === 'good' ? 0x8fe388 : 0xffb3b3);
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        card.position.set((col - (cols-1)/2) * gapX, baseY - row * gapY, baseZ);
+        card.userData.type = item.type;
+        scene.add(card);
+        cards.push(card);
+      });
+    }
+
+    function makeCard(label, color){
+      const g = new THREE.BoxGeometry(0.30, 0.18, 0.02);
+      const m = new THREE.MeshPhongMaterial({ color });
+      const mesh = new THREE.Mesh(g, m);
+      const sprite = makeTextSprite(label);
+      sprite.position.set(0, 0, 0.02);
+      mesh.add(sprite);
+      mesh.userData.card = true;
+      return mesh;
+    }
+
+    function makeBin(text, color){
+      const cyl = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.28, 0.42, 24),
+        new THREE.MeshPhongMaterial({ color, opacity:0.95, transparent:true })
+      );
+      const label = makeTextSprite(text, 0.18);
+      label.position.set(0, 0.30, 0);
+      cyl.add(label);
+      cyl.userData.bin = text; // "ถูก" or "ผิด"
+      return cyl;
+    }
+
+    function makeBillboard(txt){
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.8, 0.7),
+        new THREE.MeshBasicMaterial({ map: textTexture(txt), transparent:true })
+      );
+      return mesh;
+    }
+
+    function textTexture(txt){
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d');
+      c.width = 1024; c.height = 512;
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.fillRect(0,0,c.width,c.height);
+      ctx.fillStyle = '#111';
+      ctx.font = 'bold 64px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const lines = txt.split('\n');
+      lines.forEach((line, i)=>{
+        ctx.fillText(line, c.width/2, c.height/2 + (i- (lines.length-1)/2)*80);
+      });
+      return new THREE.CanvasTexture(c);
+    }
+
+    function makeTextSprite(txt, scale=0.12){
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d');
+      c.width = 512; c.height = 256;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,c.width,c.height);
+      ctx.fillStyle = '#111';
+      ctx.font = 'bold 46px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(txt, c.width/2, c.height/2);
+      const tex = new THREE.CanvasTexture(c);
+      const mat = new THREE.SpriteMaterial({ map: tex });
+      const spr = new THREE.Sprite(mat);
+      spr.scale.set(scale*2, scale, 1);
+      return spr;
+    }
+
+    function pickNearestCard(){
+      let nearest = null, dMin = 99;
+      scene.traverse(o=>{
+        if (o.userData?.card){
+          const d = o.position.distanceTo(reticle.position);
+          if (d < dMin && d < 0.65){ dMin = d; nearest = o; }
+        }
+      });
+      return nearest;
+    }
+
+    function dropIntoNearestBin(card){
+      let nearBin = null, dMin = 99;
+      for (const b of bins){
+        const d = b.position.distanceTo(card.position);
+        if (d < dMin){ dMin = d; nearBin = b; }
+      }
+      if (!nearBin || dMin > 0.6) return null; // not dropped
+      const isGood = card.userData.type === 'good';
+      const dropToGood = nearBin.userData.bin === 'ถูก';
+      const ok = (isGood && dropToGood) || (!isGood && !dropToGood);
+      // animate drop
+      card.position.copy(nearBin.position).add(new THREE.Vector3(0, 0.35, 0));
+      scene.remove(card); // remove from play
+      return ok;
+    }
+
+    function addScore(n){ score += n; scoreEl.textContent = "Score: " + score; }
+
+    function highlightHints(){
+      // Briefly glow all "good" cards
+      cards.forEach(c=>{
+        if (c.userData?.card && c.userData.type === 'good'){
+          c.material.emissive = new THREE.Color(0x33ff33);
+          setTimeout(()=>{ if (c.material) c.material.emissive = new THREE.Color(0x000000); }, 600);
+        }
+      });
+      showToast("ใบ้แล้ว: มองหาการ์ดสีเขียว!");
+    }
+
+    function showToast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(()=> toastEl.classList.remove('show'), 1100);
+    }
+
+    function endGame(){
+      overlayEnd.classList.remove('hidden');
+      summaryEl.textContent = `คุณทำได้ ${score} คะแนน จากการ์ดทั้งหมด ${CARDS.length}`;
+    }
+
+    function resetGame(){
+      // reset state
+      score = 0; scoreEl.textContent = "Score: 0";
+      overlayEnd.classList.add('hidden');
+      layoutCards();
+    }
+  </script>
+</body>
+</html>
