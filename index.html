@@ -1,21 +1,49 @@
 <!doctype html>
-<!-- Controllers (ray) -->
-<a-entity id="rightHand" laser-controls="hand: right"></a-entity>
-<a-entity laser-controls="hand: left"></a-entity>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>WebXR Health Quest (P5) – v2</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
+<style>
+.hud { position: fixed; top: 8px; left: 8px; right: 8px; display:flex; gap:8px; flex-wrap:wrap; z-index: 10; }
+.hud .pill { flex:1; min-width: 120px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.45); color:#fff; font-family: ui-sans-serif, system-ui; font-size: clamp(12px, 2.2vw, 16px); text-align:center; }
+.btn-ui { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,.9); color:#111; font-weight: 600; font-size: clamp(13px,2.4vw,17px); z-index: 10; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+.visuallyhidden { position:absolute; left:-9999px; }
+</style>
+</head>
+<body>
+<!-- BGM: autoplay ต้องการ user gesture → จะเรียกเล่นเมื่อกดปุ่มในเมนู -->
+<audio id="bgm" src="assets/bgm.mp3" loop preload="auto"></audio>
 
 
-<!-- HANDS (WebXR Hands) + pinch raycaster -->
-<a-entity id="handL" hand-tracking-controls="hand: left"></a-entity>
-<a-entity id="handR" hand-tracking-controls="hand: right"></a-entity>
-<a-entity id="handRay" raycaster="objects: .clickable; far: 2" line="opacity: 0.0"></a-entity>
+<div class="hud">
+<div id="hud-mode" class="pill">โหมด: เมนู</div>
+<div id="hud-score" class="pill">คะแนน: 0</div>
+<div id="hud-timer" class="pill">เวลา: 00:45</div>
+<div id="hud-diff" class="pill">ระดับ: ปกติ ×1.0</div>
+</div>
+<button id="btn-exit" class="btn-ui" onclick="APP.goMenu()" style="display:none">⟵ กลับเมนู</button>
 
 
-<a-sky color="#EAF7FF"></a-sky>
-<a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#fff"></a-plane>
+<a-scene renderer="colorManagement: true; highRefreshRate: true" background="color: #EAF7FF" vr-mode-ui="enabled: true" cursor="rayOrigin: mouse">
+<a-assets>
+<img id="img-veg" src="assets/veg.png"/>
+<img id="img-fruit" src="assets/fruit.png"/>
+<img id="img-fish" src="assets/fish.png"/>
+<img id="img-soda" src="assets/soda.png"/>
+<img id="img-chips" src="assets/chips.png"/>
+<img id="img-fries" src="assets/fries.png"/>
+</a-assets>
 
 
-<!-- MENU -->
-<a-entity id="menu" position="0 1.6 -1.4">
+<!-- Camera rig -->
+<a-entity id="rig" position="0 1.6 3">
+<a-entity camera look-controls wasd-controls></a-entity>
+<a-entity id="cursor" cursor="fuse: true; fuseTimeout: 900" position="0 0 -1" geometry="primitive: ring; radiusInner: 0.005; radiusOuter: 0.008" material="color: #222; shader: flat"></a-entity>
+<!-- MENU (ย้ายให้เป็นลูกของกล้อง เพื่อให้โผล่ตรงหน้าเสมอ) -->
+<a-entity id="menu" position="0 0 -1.2" visible="true">
 <a-entity text="value: 🧒 เกมสุขภาพ ป.5 (WebXR); align: center; width: 2.8; color: #0a2540" position="0 0.52 0"></a-entity>
 
 
@@ -44,33 +72,16 @@
 
 <a-entity text="value: แตะ/จ้อง/บีบมือ (pinch) เพื่อเลือก; align: center; width: 2; color: #333" position="0 -1.1 0"></a-entity>
 </a-entity>
-
-
-<!-- HYGIENE -->
-<a-entity id="scene-hygiene" visible="false">
-<a-entity position="0 1.6 -1.4" text="value: 🧼 ล้างมือ 7 ขั้น; align: center; width: 2.2; color: #0a2540"></a-entity>
-<a-entity id="targets"></a-entity>
 </a-entity>
 
 
-<!-- NUTRITION -->
-<a-entity id="scene-nutrition" visible="false">
-<a-entity position="0 1.6 -1.4" text="value: 🥗 จานสีรุ้ง: เลือกอาหารดีต่อสุขภาพ; align: center; width: 2.4; color: #0a2540"></a-entity>
-<a-entity id="foods" position="0 1.1 -1.4"></a-entity>
-</a-entity>
+<!-- Controllers (ray) -->
+<a-entity id="rightHand" laser-controls="hand: right"></a-entity>
+<a-entity laser-controls="hand: left"></a-entity>
 
 
-<!-- FITNESS -->
-<a-entity id="scene-fitness" visible="false">
-<a-entity position="0 1.6 -1.4" text="value: 🏃 ทำภารกิจเคลื่อนไหว; align: center; width: 2.2; color: #0a2540"></a-entity>
-<a-entity id="fitness-goal" position="0 1.1 -1.4" text="value: แตะปุ่ม Jump 10 ครั้ง!; align: center; width: 1.8; color: #111"></a-entity>
-<a-entity id="btn-jump" geometry="primitive: plane; width: 0.9; height: .28" material="color: #FFFFFF" position="0 0.6 -1.4" class="clickable"></a-entity>
-<a-entity text="value: JUMP; align: center; width: 1.4; color: #111" position="0 0.6 -1.39"></a-entity>
-</a-entity>
-</a-scene>
-
-
-<!-- แยกไฟล์สคริปต์ -->
-<script src="app.js"></script>
-</body>
+<!-- HANDS (WebXR Hands) + pinch raycaster -->
+<a-entity id="handL" hand-tracking-controls="hand: left"></a-entity>
+<a-entity id="handR" hand-tracking-controls="hand: right"></a-entity>
+<a-entity id="handRay" raycaster="objects: .clickable; far: 2" line="opacity: 0.0"></a-entity>
 </html>
