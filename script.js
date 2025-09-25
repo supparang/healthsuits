@@ -1,55 +1,49 @@
-/* ===== Global text sizes (meters) – ลดลงแบบชัดเจน ===== */
+/* ===== ขนาดตัวอักษร (เมตร) — เวอร์ชันเล็กมากสำหรับมือถือ ===== */
 const TEXT_SIZE = {
-  hud:    0.024,  // เดิม 0.034
-  title:  0.026,  // เดิม 0.036
-  hint:   0.022,  // เดิม 0.032
-  label:  0.022,  // เดิม 0.032
-  button: 0.024   // เดิม 0.034
+  hud:    0.016,
+  title:  0.018,
+  hint:   0.015,
+  label:  0.015,
+  button: 0.016
 };
 
-/* ===== Helpers: troika-text compatible creator ===== */
+/* ===== Helpers: troika-text compatible ===== */
 function $(sel){ return document.querySelector(sel); }
-
 function setAttrCompat(element, name, value){
-  // แปลง A-Frame text → troika-text (รองรับไทย) + เติม fontSize ถ้าไม่กำหนด
   if (name === 'text') {
     let s = String(value)
       .replace(/(^|;)\s*align\s*:/g, '$1 anchor:')
       .replace(/(^|;)\s*width\s*:/g, '$1 maxWidth:');
     if (!/fontSize\s*:/.test(s)) s += `; fontSize: ${TEXT_SIZE.label}`;
-    name = 'troika-text';
-    value = s;
+    name = 'troika-text'; value = s;
   }
   element.setAttribute(name, value);
 }
-
 function el(tag, attrs={}, children=[]){
   const e = document.createElement(tag);
   Object.entries(attrs).forEach(([k,v])=>{
     if (typeof v === 'object' && k !== 'animation' && !k.startsWith('animation__')) {
       const s = Object.entries(v).map(([kk,vv])=>`${kk}:${vv}`).join('; ');
       setAttrCompat(e, k, s);
-    } else {
-      setAttrCompat(e, k, v);
-    }
+    } else { setAttrCompat(e, k, v); }
   });
   children.forEach(c=>e.appendChild(c));
   return e;
 }
 
-/* ===== Desktop cursor/raycaster (แก้ให้คลิกโดนทั้งปุ่มและข้อความ) ===== */
+/* ===== Cursor/Raycaster: เดสก์ท็อป & มือถือ ===== */
 AFRAME.registerComponent('ensure-cursor', {
   init(){
     const cam = $('#camera');
-    if (cam){
-      cam.setAttribute('cursor', 'rayOrigin: mouse');
-      // เดิม objects: .clickable → เปลี่ยนให้ครอบคลุมข้อความ troika ด้วย
-      cam.setAttribute('raycaster', 'objects: .clickable, [troika-text]; far: 20');
-    }
+    if (!cam) return;
+    // เดสก์ท็อป: ใช้เมาส์
+    cam.setAttribute('cursor', 'rayOrigin: mouse');
+    cam.setAttribute('raycaster', 'objects: .clickable, [troika-text]; far: 20');
+    // มือถือ: มีรีทิเคิลใน index.html แล้ว (id=reticle)
   }
 });
 
-/* ===== Force-apply font sizes on HTML labels ===== */
+/* ===== Force-apply font sizes (HUD/เมนู) ===== */
 AFRAME.registerComponent('fontsize-apply', {
   init(){
     const setFS = (selector, size)=>{
@@ -61,19 +55,17 @@ AFRAME.registerComponent('fontsize-apply', {
         el.setAttribute('troika-text', t2);
       });
     };
-    // HUD
     setFS('#hudState', TEXT_SIZE.hud);
     setFS('#hudScore', TEXT_SIZE.hud);
     setFS('#hudTime', TEXT_SIZE.hud);
-    // ป้ายในเมนู
     setFS('#grp_menu [troika-text]', TEXT_SIZE.button);
   }
 });
 
-/* ===== Core Gameflow ===== */
+/* ===== Gameflow ===== */
 AFRAME.registerSystem('gameflow', {
   init(){
-    this.state = 'menu';         // menu | hygiene | nutrition | exercise
+    this.state = 'menu';
     this.timeLeft = 0;
     this.score = 0;
     this.activeGame = null;
@@ -88,20 +80,16 @@ AFRAME.registerSystem('gameflow', {
     });
   },
   startGame(kind, secs){
-    this.score = 0;
-    this.timeLeft = secs;
-    this.updateHUD();
-    this.setState(kind);
+    this.score = 0; this.timeLeft = secs; this.updateHUD(); this.setState(kind);
     if (this.activeGame?.stop) this.activeGame.stop();
     if (kind==='hygiene') this.activeGame = HygieneGame.start(this);
     if (kind==='nutrition') this.activeGame = NutritionGame.start(this);
     if (kind==='exercise') this.activeGame = ExerciseGame.start(this);
   },
-  endGame(message='จบเกม'){
-    alert(`${message}\nคะแนนของคุณ: ${this.score}`);
+  endGame(msg='จบเกม'){
+    alert(`${msg}\nคะแนนของคุณ: ${this.score}`);
     if (this.activeGame?.stop) this.activeGame.stop();
-    this.activeGame = null;
-    this.setState('menu');
+    this.activeGame = null; this.setState('menu');
   },
   addScore(n=1){ this.score += n; this.updateHUD(); },
   updateHUD(){
@@ -124,13 +112,12 @@ AFRAME.registerComponent('tick-timer', {
   }
 });
 
-/* ===== Hand gestures (optional wave-back) ===== */
+/* ===== Hand gestures (optional) ===== */
 AFRAME.registerComponent('hand-gestures', {
   init(){ this.cool=0; },
   tick(t,dt){
     this.cool = Math.max(0, this.cool - dt);
-    const right = $('#handRight');
-    const sys = this.el.sceneEl.systems.gameflow;
+    const right = $('#handRight'); const sys = this.el.sceneEl.systems.gameflow;
     if (!right || sys.state==='menu') return;
     const wrist = right.components['hand-tracking-controls']?.wristPosition;
     if (wrist && this.prevX!==undefined){
@@ -141,9 +128,9 @@ AFRAME.registerComponent('hand-gestures', {
   }
 });
 
-/* ===== Menu buttons ===== */
+/* ===== เมนู ===== */
 window.goMode = function(mode){
-  const sys = $('a-scene').systems.gameflow;
+  const sys = document.querySelector('a-scene').systems.gameflow;
   if (mode==='hygiene')  sys.startGame('hygiene', 90);
   if (mode==='nutrition')sys.startGame('nutrition', 90);
   if (mode==='exercise') sys.startGame('exercise', 90);
@@ -182,9 +169,9 @@ const HygieneGame = (function(){
       {x: 0.6, key:'hard',   label:'ยาก',  color:'#EF476F'}
     ];
     defs.forEach(d=>{
-      const btn = el('a-box', {class:'clickable', position:`${d.x} -0.25 0`, width:0.6, height:0.22, depth:0.08, color:d.color}, [
+      const btn = el('a-box', {class:'clickable', position:`${d.x} -0.25 0`, width:0.6, height:0.18, depth:0.08, color:d.color}, [
         el('a-entity', {position:'0 0 0.06',
-          text:`value:${d.label}; anchor:center; maxWidth:1.4; fontSize: ${TEXT_SIZE.button}`})
+          text:`value:${d.label}; anchor:center; maxWidth:1.3; fontSize: ${TEXT_SIZE.button}`})
       ]);
       btn.addEventListener('click', ()=>{
         diffKey = d.key;
@@ -199,7 +186,7 @@ const HygieneGame = (function(){
   function makeTarget(pos, text, key, radius, holdMs){
     const wrap = el('a-entity', {position:pos});
     const plate = el('a-circle', {radius:radius, color:'#88E0FF', class:'clickable'});
-    const label = el('a-entity', {position:'0 -0.24 0',
+    const label = el('a-entity', {position:'0 -0.20 0',
       text:`value:${text}; anchor:center; maxWidth:2; color:#FFFFFF; fontSize: ${TEXT_SIZE.label}`});
     wrap.appendChild(plate); wrap.appendChild(label);
 
@@ -220,8 +207,7 @@ const HygieneGame = (function(){
         sys.addScore(DIFF[diffKey].scoreAdd);
         sys.timeLeft += DIFF[diffKey].timeBonus;
         plate.setAttribute('animation__pop', {property:'scale', to:'1.3 1.3 1.3', dur:120, dir:'alternate', loop:1});
-        idx++;
-        updateHighlight();
+        idx++; updateHighlight();
         if (idx>=steps.length) sys.endGame('สะอาดหมดจด!');
       } else {
         if (DIFF[diffKey].penalty) sys.addScore(DIFF[diffKey].penalty);
@@ -235,7 +221,7 @@ const HygieneGame = (function(){
   }
 
   function makeDistractor(pos){
-    const d = el('a-sphere', {class:'clickable', position:pos, radius:0.08, color:'#FF595E'});
+    const d = el('a-sphere', {class:'clickable', position:pos, radius:0.06, color:'#FF595E'});
     d.addEventListener('click', ()=>{
       const sys = $('a-scene').systems.gameflow;
       sys.addScore(DIFF[diffKey].penalty || -2);
@@ -245,43 +231,29 @@ const HygieneGame = (function(){
     return d;
   }
 
-  function shuffle(arr){
-    const a = arr.slice();
-    for (let i=a.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [a[i],a[j]] = [a[j],a[i]];
-    }
-    return a;
-  }
-
+  function shuffle(a){ for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
   function hint(msg){
     hintText?.setAttribute('troika-text',
       `value:${msg}; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hint}`);
   }
-
   function updateHighlight(){
-    targets.forEach((t,i)=>{
-      t.__plate.setAttribute('color', i===idx ? '#00FFC6' : '#88E0FF');
-    });
+    targets.forEach((t,i)=> t.__plate.setAttribute('color', i===idx ? '#00FFC6' : '#88E0FF'));
     const next = steps[idx]?.label || 'เสร็จแล้ว!';
     titleText?.setAttribute('troika-text',
       `value:ล้างมือให้ครบลำดับ — ขั้นต่อไป: ${next}; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`);
   }
 
-  let targets=[], titleText=null, hintText=null;
+  let targets=[], titleText=null, hintText=null, group=null;
   function startRound(){
     group.innerHTML = '';
-
-    steps = BASE_STEPS.slice();
-    if (DIFF[diffKey].shuffle) steps = shuffle(steps);
+    steps = BASE_STEPS.slice(); if (DIFF[diffKey].shuffle) steps = shuffle(steps);
     idx = 0;
 
     titleText = el('a-entity', {position:'0 1.1 -1.2',
       text:`value:ล้างมือให้ครบลำดับ — เล็งวงสีเขียว; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
     hintText  = el('a-entity', {position:'0 0.95 -1.2',
       text:`value:แตะ/กดค้างที่เป้า (ยากจะต้องค้างนานขึ้น); anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hint}`});
-    group.appendChild(titleText);
-    group.appendChild(hintText);
+    group.appendChild(titleText); group.appendChild(hintText);
 
     const positions = [
       ' -0.6 1.45 -1.2',' -0.2 1.45 -1.2',' 0.2 1.45 -1.2',
@@ -299,14 +271,11 @@ const HygieneGame = (function(){
     updateHighlight();
   }
 
-  let groupRef=null;
   return {
     start(){
-      group = $('#grp_hygiene');
-      group.innerHTML = '';
+      group = $('#grp_hygiene'); group.innerHTML = '';
       buildDifficultyChooser();
-      groupRef = group;
-      return { stop(){ groupRef && (groupRef.innerHTML=''); } };
+      return { stop(){ group && (group.innerHTML=''); } };
     }
   };
 })();
@@ -333,9 +302,9 @@ const NutritionGame = (function(){
 
   function makeChoice(x, label, cat){
     const btn = el('a-box', {class:'clickable', position:`${x} 0.6 -1.1`,
-      width:0.7, height:0.22, depth:0.08, color:'#3A86FF'});
+      width:0.65, height:0.18, depth:0.08, color:'#3A86FF'});
     btn.appendChild(el('a-entity',{position:'0 0 0.06',
-      text:`value:${label}; anchor:center; maxWidth:1.6; fontSize: ${TEXT_SIZE.button}`}));
+      text:`value:${label}; anchor:center; maxWidth:1.5; fontSize: ${TEXT_SIZE.button}`}));
     btn.addEventListener('click', ()=>{
       const sys = $('a-scene').systems.gameflow;
       if (!current) return;
@@ -360,8 +329,7 @@ const NutritionGame = (function(){
 
   return {
     start(){
-      group = $('#grp_nutrition');
-      group.innerHTML = '';
+      group = $('#grp_nutrition'); group.innerHTML = '';
       qText = el('a-entity',{position:'0 1.15 -1.2',
         text:`value:จัดหมวด: ...; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
       const hintText = el('a-entity',{id:'grp_nutrition_hint', position:'0 0.95 -1.2',
@@ -390,7 +358,7 @@ const ExerciseGame = (function(){
   let group=null, info=null, markers=[], poseIdx=0, stepIdx=0, handCheckInterval=null;
 
   function makeMarker(posStr, idx){
-    const m = el('a-sphere', {class:'clickable', position:posStr, radius:0.12, color:'#FFD166'});
+    const m = el('a-sphere', {class:'clickable', position:posStr, radius:0.1, color:'#FFD166'});
     m.addEventListener('click', ()=> hit(idx));
     return m;
   }
@@ -407,7 +375,7 @@ const ExerciseGame = (function(){
       return;
     }
     sys.addScore(3);
-    markers[i].setAttribute('animation__pop', {property:'scale', to:'1.3 1.3 1.3', dur:100, dir:'alternate', loop:1});
+    markers[i].setAttribute('animation__pop', {property:'scale', to:'1.25 1.25 1.25', dur:100, dir:'alternate', loop:1});
     stepIdx++;
     if (stepIdx>=POSES[poseIdx].seq.length){
       poseIdx++; stepIdx=0;
@@ -422,18 +390,15 @@ const ExerciseGame = (function(){
     const hand = $('#handRight');
     const comp = hand?.components['hand-tracking-controls'];
     if (!comp) return;
-    const wrist = comp.wristPosition;
-    if (!wrist) return;
-    const idx = currentTargetIdx();
-    const obj = markers[idx].object3D;
+    const wrist = comp.wristPosition; if (!wrist) return;
+    const idx = currentTargetIdx(); const obj = markers[idx].object3D;
     const wp = new THREE.Vector3(); obj.getWorldPosition(wp);
     if (distance(wrist, wp) < 0.15) hit(idx);
   }
 
   return {
     start(){
-      group = $('#grp_exercise');
-      group.innerHTML = '';
+      group = $('#grp_exercise'); group.innerHTML = '';
       info = el('a-entity',{position:'0 1.05 -1.1',
         text:`value:ทำตามเป้าให้ทันเวลา; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
       group.appendChild(info);
