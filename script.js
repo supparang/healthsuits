@@ -116,10 +116,11 @@ window.goMode = function(mode){
 };
 
 /* =========================
-   MiniGame #1: Hygiene (ล้างมือ 7 ขั้น)
+   MiniGame #1: Hygiene (ล้างมือ 7 ขั้น + ความยาก)
    ========================= */
 const HygieneGame = (function(){
-  const steps = [
+  // 7 ขั้นพื้นฐาน
+  const BASE_STEPS = [
     {key:'palm',    label:'ฝ่ามือถูฝ่ามือ'},
     {key:'back',    label:'ถูหลังมือ'},
     {key:'between', label:'ถูซอกนิ้ว'},
@@ -128,54 +129,197 @@ const HygieneGame = (function(){
     {key:'wrist',   label:'ถูรอบข้อมือ'},
     {key:'rinse',   label:'ล้าง/เช็ดให้แห้ง'}
   ];
-  let idx = 0, group=null, targets=[];
-  function makeTarget(pos, text, key){
-    const tgt = el('a-entity', {position:pos});
-    const plate = el('a-circle', {radius:0.14, color:'#88E0FF', class:'clickable'});
-    const label = el('a-entity', {position:'0 -0.24 0', text:`value:${text}; align:center; width:2; color:#FFF`});
-    tgt.appendChild(plate); tgt.appendChild(label);
-    // click to check step
-    plate.addEventListener('click', ()=>{
-      const sys = $('a-scene').systems.gameflow;
+
+  // ตั้งค่าความยาก
+  const DIFF = {
+    easy:   { radius:0.16, holdMs:  0, shuffle:false, timeBonus: 5, scoreAdd: 5, distractors:0 },
+    normal: { radius:0.13, holdMs:150, shuffle:false, timeBonus: 3, scoreAdd: 6, distractors:1 },
+    hard:   { radius:0.10, holdMs:350, shuffle:true,  timeBonus: 2, scoreAdd: 7, distractors:3, penalty:-3 }
+  };
+
+  let group=null, idx=0, steps=[], targets=[], currentBtn=null, holdTimer=null, diffKey='normal';
+  let hintText=null, titleText=null, chooser=null, distractorEls=[];
+
+  // UI เลือกความยาก
+  function buildDifficultyChooser(){
+    chooser = document.createElement('a-entity');
+    chooser.setAttribute('position','0 1.35 -1.15');
+    const head = document.createElement('a-entity');
+    head.setAttribute('text','value:เลือกความยาก; width:2; align:center; color:#FFF');
+    chooser.appendChild(head);
+
+    const defs = [
+      {x:-0.6, key:'easy',   label:'ง่าย'},
+      {x: 0.0, key:'normal', label:'ปกติ'},
+      {x: 0.6, key:'hard',   label:'ยาก'}
+    ];
+    defs.forEach(d=>{
+      const btn = document.createElement('a-box');
+      btn.setAttribute('class','clickable');
+      btn.setAttribute('position', `${d.x} -0.25 0`);
+      btn.setAttribute('width','0.6'); btn.setAttribute('height','0.22'); btn.setAttribute('depth','0.08');
+      btn.setAttribute('color', d.key==='easy'?'#06D6A0': (d.key==='normal'?'#FFD166':'#EF476F'));
+      const label = document.createElement('a-entity');
+      label.setAttribute('position','0 0 0.06');
+      label.setAttribute('text', `value:${d.label}; align:center; width:1.4`);
+      btn.appendChild(label);
+      btn.addEventListener('click', ()=>{
+        diffKey = d.key;
+        if (chooser && chooser.parentNode) chooser.parentNode.removeChild(chooser);
+        startRound();
+      });
+      chooser.appendChild(btn);
+    });
+    group.appendChild(chooser);
+  }
+
+  // สร้างเป้าหมาย 7 จุด
+  function makeTarget(pos, text, key, radius, holdMs){
+    const wrap = document.createElement('a-entity');
+    wrap.setAttribute('position', pos);
+
+    const plate = document.createElement('a-circle');
+    plate.setAttribute('radius', radius);
+    plate.setAttribute('color', '#88E0FF');
+    plate.setAttribute('class','clickable');
+
+    const label = document.createElement('a-entity');
+    label.setAttribute('position','0 -0.24 0');
+    label.setAttribute('text', `value:${text}; align:center; width:2; color:#FFF`);
+
+    wrap.appendChild(plate); wrap.appendChild(label);
+
+    // การกดค้าง (hold detection)
+    const startHold = ()=>{
+      if (holdTimer) clearTimeout(holdTimer);
+      holdTimer = setTimeout(()=>{ checkHit(); }, Math.max(0, holdMs));
+    };
+    const cancelHold = ()=>{ if (holdTimer) { clearTimeout(holdTimer); holdTimer=null; } };
+
+    // ทำงานทั้งคลิก (desktop) และกดค้าง (VR cursor)
+    plate.addEventListener('mousedown', startHold);
+    plate.addEventListener('mouseup', cancelHold);
+    plate.addEventListener('mouseleave', cancelHold);
+    // รองรับกรณีที่ไม่มี hold (easy)
+    plate.addEventListener('click', ()=>{ if (holdMs===0) checkHit(); });
+
+    function checkHit(){
+      const sys = document.querySelector('a-scene').systems.gameflow;
       if (steps[idx].key===key){
-        sys.addScore(5);
+        sys.addScore(DIFF[diffKey].scoreAdd);
+        sys.timeLeft += DIFF[diffKey].timeBonus; // ให้เวลาเพิ่ม
         plate.setAttribute('animation__pop', {property:'scale', to:'1.3 1.3 1.3', dur:120, dir:'alternate', loop:1});
         idx++;
         updateHighlight();
-        if (idx>=steps.length){
-          sys.endGame('สะอาดหมดจด!');
-        }
+        if (idx>=steps.length) sys.endGame('สะอาดหมดจด!');
       } else {
-        // hint small shake
+        // ผิดขั้น (เฉพาะ hard จะมีโทษ)
+        if (DIFF[diffKey].penalty) {
+          sys.addScore(DIFF[diffKey].penalty);
+        }
+        // สั่นเตือน
         plate.setAttribute('animation__shake', {property:'position', to:'0 0 0.02', dur:80, dir:'alternate', loop:2});
+        hint(`ยังไม่ใช่ขั้นนี้ ลองดูวงสีเขียว (ขั้นถัดไป)`);
       }
-    });
-    return tgt;
+    }
+
+    // เก็บอ้างอิงเพื่อเปลี่ยนสีไฮไลต์
+    wrap.__plate = plate;
+    return wrap;
   }
+
+  // สิ่งรบกวน (คลิกแล้วหักคะแนน)
+  function makeDistractor(pos){
+    const d = document.createElement('a-sphere');
+    d.setAttribute('class','clickable');
+    d.setAttribute('position', pos);
+    d.setAttribute('radius','0.08');
+    d.setAttribute('color','#FF595E');
+    d.addEventListener('click', ()=>{
+      const sys = document.querySelector('a-scene').systems.gameflow;
+      sys.addScore(DIFF[diffKey].penalty || -2);
+      d.setAttribute('animation__shake', {property:'position', to:'0 0 0.03', dur:80, dir:'alternate', loop:2});
+      hint('ระวังสิ่งรบกวน!');
+    });
+    return d;
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for (let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function hint(msg){
+    if (!hintText) return;
+    hintText.setAttribute('text', `value:${msg}; width:2; align:center`);
+  }
+
   function updateHighlight(){
     targets.forEach((t,i)=>{
       const c = (i===idx)? '#00FFC6' : '#88E0FF';
-      t.querySelector('a-circle').setAttribute('color', c);
+      t.__plate.setAttribute('color', c);
     });
-    $('#grp_hygiene').setAttribute('text', 'value', `ทำตามลำดับ: ${steps[idx]?.label||'เสร็จแล้ว!'}`);
+    const next = steps[idx]?.label || 'เสร็จแล้ว!';
+    titleText?.setAttribute('text', `value:ล้างมือให้ครบลำดับ — ขั้นต่อไป: ${next}; width:2; align:center`);
   }
+
+  function startRound(){
+    // เคลียร์ฉาก
+    group.innerHTML = '';
+
+    // เตรียม steps ตามระดับ
+    steps = BASE_STEPS.slice();
+    if (DIFF[diffKey].shuffle) steps = shuffle(steps);
+    idx = 0;
+
+    // UI หัวข้อ + hint
+    titleText = document.createElement('a-entity');
+    titleText.setAttribute('position','0 1.1 -1.2');
+    titleText.setAttribute('text','value:ล้างมือให้ครบลำดับ — เล็งวงสีเขียว; width:2; align:center');
+    hintText = document.createElement('a-entity');
+    hintText.setAttribute('position','0 0.95 -1.2');
+    hintText.setAttribute('text','value:แตะ/กดค้างที่เป้า (ยากจะต้องค้างนานขึ้น); width:2; align:center');
+
+    group.appendChild(titleText);
+    group.appendChild(hintText);
+
+    // วางตำแหน่ง 7 จุด
+    const positions = [
+      ' -0.6 1.45 -1.2', ' -0.2 1.45 -1.2', ' 0.2 1.45 -1.2',
+      ' 0.6 1.45 -1.2',  ' -0.4 1.15 -1.2',' 0.0 1.15 -1.2',' 0.4 1.15 -1.2'
+    ];
+    const cfg = DIFF[diffKey];
+    targets = steps.map((s,i)=> makeTarget(positions[i], s.label, s.key, cfg.radius, cfg.holdMs));
+    targets.forEach(t=>group.appendChild(t));
+
+    // สร้างสิ่งรบกวน (เฉพาะโหมดยาก/หรือมี distractors>0)
+    distractorEls = [];
+    for (let i=0;i<(cfg.distractors||0);i++){
+      const x = -0.8 + Math.random()*1.6;
+      const y =  1.0 + Math.random()*0.6;
+      const d = makeDistractor(`${x.toFixed(2)} ${y.toFixed(2)} -1.2`);
+      group.appendChild(d);
+      distractorEls.push(d);
+    }
+
+    updateHighlight();
+  }
+
   return {
     start(sys){
-      group = $('#grp_hygiene');
-      group.innerHTML = ''; // clear
-      const title = el('a-entity', {position:'0 1.1 -1.2', text:'value:ล้างมือให้ครบลำดับ (แตะเป้า); width:2; align:center'});
-      group.appendChild(title);
-      const positions = [
-        ' -0.6 1.45 -1.2', ' -0.2 1.45 -1.2', ' 0.2 1.45 -1.2',
-        ' 0.6 1.45 -1.2',  ' -0.4 1.15 -1.2',' 0.0 1.15 -1.2',' 0.4 1.15 -1.2'
-      ];
-      targets = steps.map((s,i)=> makeTarget(positions[i], s.label, s.key));
-      targets.forEach(t=>group.appendChild(t));
-      idx=0; updateHighlight();
+      group = document.querySelector('#grp_hygiene');
+      group.innerHTML = '';
+      // แสดงตัวเลือกความยากก่อนเริ่ม
+      buildDifficultyChooser();
       return { stop(){ group && (group.innerHTML=''); } };
     }
   };
 })();
+
 
 /* =========================
    MiniGame #2: Nutrition (แยกหมวดอาหารแบบกดตอบ)
