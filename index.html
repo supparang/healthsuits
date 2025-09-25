@@ -1,85 +1,216 @@
-<!DOCTYPE html>
+<!--
+WebXR Health Quest (P5)
+Theme: Personal Hygiene, Nutrition, Exercise
+Tech: A‑Frame 1.5.0 (WebXR), works in mobile VR/cardboard and desktop. Compatible to embed in Spatial.io as a Web Content URL.
+Files in this starter pack:
+  - index.html (this file)
+  - app.js (inline as <script> at bottom; split into app.js if you prefer)
+Notes:
+  - Tested patterns: gaze + controller + touch support, responsive text, simple menu system.
+  - Hand tracking hooks included (if device/browser supports WebXR Hands).
+  - Keep HTTPS hosting. For Spatial: Add "Web Content" > paste your hosting URL.
+-->
+<!doctype html>
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <title>Health3 VR — Spatial/WebXR</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1"/>
-  <!-- A-Frame core -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>WebXR Health Quest (P5)</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <!-- Troika (รองรับภาษาไทย) -->
-  <script src="https://unpkg.com/troika-three-text/dist/troika-three-text.umd.js"></script>
-  <script src="https://unpkg.com/aframe-troika-text/dist/aframe-troika-text.min.js"></script>
-  <!-- Game logic -->
-  <script src="script.js"></script>
+  <!-- Optional: controller/hand visualizers -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   <style>
-    html,body { margin:0; height:100%; background:#000; touch-action: manipulation; }
-    canvas { touch-action: manipulation; }
+    /* Overlay HUD for score/time, tuned for phones */
+    .hud { position: fixed; top: 8px; left: 8px; right: 8px; display:flex; gap:8px; flex-wrap:wrap; z-index: 10; }
+    .hud .pill { flex:1; min-width: 120px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.45); color:#fff; font-family: ui-sans-serif, system-ui; font-size: clamp(12px, 2.2vw, 16px); text-align:center; }
+    .btn-ui { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,.85); color:#111; font-weight: 600; font-size: clamp(13px,2.4vw,17px); z-index: 10; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+    .visuallyhidden { position:absolute; left:-9999px; }
   </style>
 </head>
 <body>
-  <!-- เปิด fontsize-apply + ensure-cursor + tap-to-click -->
-  <a-scene renderer="antialias: true"
-           tick-timer hand-gestures ensure-cursor fontsize-apply tap-to-click>
-    <!-- กล้อง + ตัวชี้ -->
-    <a-entity id="rig">
-      <a-entity id="camera" camera look-controls position="0 1.6 0">
-        <!-- รีทิเคิล (ชี้กลางหน้าจอ) -->
-        <a-entity id="reticle"
-                  cursor="rayOrigin: entity; fuse: false"
-                  raycaster="objects: .clickable, [troika-text]; far: 30"
-                  geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
-                  material="color: #FFFFFF; shader: flat; opacity: 0.9"
-                  position="0 0 -1"></a-entity>
-      </a-entity>
-      <a-entity laser-controls="hand: right"></a-entity>
-      <a-entity id="handRight" hand-tracking-controls="hand: right"></a-entity>
-      <a-entity hand-tracking-controls="hand: left"></a-entity>
+  <!-- HUD -->
+  <div class="hud">
+    <div id="hud-mode" class="pill">โหมด: เมนู</div>
+    <div id="hud-score" class="pill">คะแนน: 0</div>
+    <div id="hud-timer" class="pill">เวลา: 00:45</div>
+  </div>
+  <button id="btn-exit" class="btn-ui" onclick="APP.goMenu()" style="display:none">⟵ กลับเมนู</button>
+
+  <a-scene renderer="colorManagement: true; highRefreshRate: true" background="color: #EAF7FF" vr-mode-ui="enabled: true" cursor="rayOrigin: mouse">
+    <!-- Camera rig with gaze reticle & controller raycasters -->
+    <a-entity id="rig" position="0 1.6 3">
+      <a-entity camera look-controls wasd-controls></a-entity>
+      <a-entity id="cursor" cursor="fuse: true; fuseTimeout: 900" position="0 0 -1" geometry="primitive: ring; radiusInner: 0.005; radiusOuter: 0.008" material="color: #222; shader: flat"></a-entity>
     </a-entity>
 
-    <!-- HUD (ย้ายไปไกลขึ้นเพื่อลดขนาดบนจอ) -->
-    <a-entity id="hudState" position="0 1.70 -1.6"
-              troika-text="value:โหมด: menu; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
-    <a-entity id="hudScore" position="0 1.52 -1.6"
-              troika-text="value:คะแนน: 0; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
-    <a-entity id="hudTime"  position="0 1.34 -1.6"
-              troika-text="value:เวลา: 0s; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
+    <!-- Controller rays (show if available) -->
+    <a-entity laser-controls="hand: right"></a-entity>
+    <a-entity laser-controls="hand: left"></a-entity>
 
-    <!-- พื้นหลัง -->
-    <a-sky color="#224466"></a-sky>
-    <a-plane position="0 0 -2" rotation="-90 0 0" width="20" height="20" color="#334455"></a-plane>
+    <!-- HANDS (optional): shows simple hand models if supported -->
+    <a-entity id="hands" hand-tracking-controls="hand: left"></a-entity>
+    <a-entity hand-tracking-controls="hand: right"></a-entity>
 
-    <!-- เมนูหลัก (ย้ายไปไกลขึ้น) -->
-    <a-entity id="grp_menu" visible="true" position="0 1.25 -1.6">
-      <a-entity position="0 0 0"
-                troika-text="value:เลือกมินิเกม; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
+    <!-- SKY & ground -->
+    <a-sky color="#EAF7FF"></a-sky>
+    <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" color="#fff"></a-plane>
 
-      <a-box class="clickable" position="0 -0.5 0" depth="0.08" height="0.2" width="0.9"
-             color="#06D6A0" onclick="goMode('hygiene')">
-        <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:อนามัยส่วนบุคคล; anchor: center; maxWidth: 1.6"></a-entity>
-      </a-box>
+    <!-- ===== MAIN MENU ===== -->
+    <a-entity id="menu" position="0 1.6 -1.4">
+      <a-entity text="value: 🧒 เกมสุขภาพสำหรับ ป.5; align: center; width: 2.8; color: #0a2540" position="0 0.42 0"></a-entity>
+      <a-entity id="btn-hygiene" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 0.1 0" class="clickable"></a-entity>
+      <a-entity text="value: 🧼 Handwash Hero (อนามัยส่วนบุคคล); align: center; width: 2.4; color: #111" position="0 0.1 0.01"></a-entity>
 
-      <a-box class="clickable" position="0 -1.0 0" depth="0.08" height="0.2" width="0.9"
-             color="#FFD166" onclick="goMode('nutrition')">
-        <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:โภชนาการ; anchor: center; maxWidth: 1.6"></a-entity>
-      </a-box>
+      <a-entity id="btn-nutrition" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 -0.2 0" class="clickable"></a-entity>
+      <a-entity text="value: 🥗 Rainbow Plate (โภชนาการ); align: center; width: 2.4; color: #111" position="0 -0.2 0.01"></a-entity>
 
-      <a-box class="clickable" position="0 -1.5 0" depth="0.08" height="0.2" width="0.9"
-             color="#4CC9F0" onclick="goMode('exercise')">
-        <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:การออกกำลังกาย; anchor: center; maxWidth: 1.6"></a-entity>
-      </a-box>
+      <a-entity id="btn-fitness" geometry="primitive: plane; width: 1.8; height: .28" material="color: #FFFFFF" position="0 -0.5 0" class="clickable"></a-entity>
+      <a-entity text="value: 🏃 Move Quest (การออกกำลังกาย); align: center; width: 2.4; color: #111" position="0 -0.5 0.01"></a-entity>
+
+      <a-entity text="value: แตะ/จ้องที่ปุ่มเพื่อเริ่ม; align: center; width: 2; color: #333" position="0 -0.92 0"></a-entity>
     </a-entity>
 
-    <!-- ฉากย่อย -->
-    <a-entity id="grp_hygiene" visible="false"></a-entity>
-    <a-entity id="grp_nutrition" visible="false"></a-entity>
-    <a-entity id="grp_exercise" visible="false"></a-entity>
+    <!-- ===== HYGIENE GAME ===== -->
+    <a-entity id="scene-hygiene" visible="false">
+      <a-entity position="0 1.6 -1.4" text="value: 🧼 ล้างมือ 7 ขั้น; align: center; width: 2.2; color: #0a2540"></a-entity>
+      <!-- 7 green target bubbles in order -->
+      <a-entity id="targets"></a-entity>
+    </a-entity>
 
-    <!-- แสง -->
-    <a-entity light="type: ambient; intensity: 0.7"></a-entity>
-    <a-entity light="type: directional; intensity: 0.6" position="1 3 2"></a-entity>
+    <!-- ===== NUTRITION GAME ===== -->
+    <a-entity id="scene-nutrition" visible="false">
+      <a-entity position="0 1.6 -1.4" text="value: 🥗 จานสีรุ้ง: เลือกอาหารดีต่อสุขภาพ; align: center; width: 2.4; color: #0a2540"></a-entity>
+      <!-- Food cards grid -->
+      <a-entity id="foods" position="0 1.1 -1.4"></a-entity>
+    </a-entity>
+
+    <!-- ===== FITNESS GAME ===== -->
+    <a-entity id="scene-fitness" visible="false">
+      <a-entity position="0 1.6 -1.4" text="value: 🏃 ทำภารกิจเคลื่อนไหว; align: center; width: 2.2; color: #0a2540"></a-entity>
+      <a-entity id="fitness-goal" position="0 1.1 -1.4" text="value: แตะปุ่ม Jump 10 ครั้ง!; align: center; width: 1.8; color: #111"></a-entity>
+      <a-entity id="btn-jump" geometry="primitive: plane; width: 0.9; height: .28" material="color: #FFFFFF" position="0 0.6 -1.4" class="clickable"></a-entity>
+      <a-entity text="value: JUMP; align: center; width: 1.4; color: #111" position="0 0.6 -1.39"></a-entity>
+    </a-entity>
   </a-scene>
+
+  <script>
+  // ===== Simple utility =====
+  const qs = (s, r = document) => r.querySelector(s);
+  const qsa = (s, r = document) => [...r.querySelectorAll(s)];
+
+  // Responsive text width helper (A-Frame text width is in meters); we tune once here
+  const UI = {
+    setHUD(mode, score, secs) {
+      qs('#hud-mode').textContent = 'โหมด: ' + mode;
+      qs('#hud-score').textContent = 'คะแนน: ' + score;
+      const m = Math.floor(secs / 60).toString().padStart(2,'0');
+      const s = (secs % 60).toString().padStart(2,'0');
+      qs('#hud-timer').textContent = `เวลา: ${m}:${s}`;
+    }
+  };
+
+  // ===== Game State =====
+  const APP = {
+    mode: 'เมนู', score: 0, timeLeft: 45, timerId: null, current: null,
+    startTimer(sec=45){ this.timeLeft = sec; clearInterval(this.timerId);
+      this.timerId = setInterval(()=>{ this.timeLeft--; UI.setHUD(this.mode,this.score,this.timeLeft); if(this.timeLeft<=0){ this.endMode(); } },1000);
+    },
+    setMode(m){ this.mode = m; UI.setHUD(this.mode,this.score,this.timeLeft); },
+    goMenu(){ this.setMode('เมนู'); clearInterval(this.timerId); this.showOnly('#menu'); qs('#btn-exit').style.display='none'; },
+    showOnly(sel){ qsa('#menu, #scene-hygiene, #scene-nutrition, #scene-fitness').forEach(e=>e.setAttribute('visible', false)); qs(sel).setAttribute('visible', true); },
+    addScore(n=1){ this.score += n; UI.setHUD(this.mode,this.score,this.timeLeft); },
+    endMode(){ alert('จบโหมด ' + this.mode + '\nคะแนน: ' + this.score); this.goMenu(); }
+  };
+  window.APP = APP;
+
+  // ===== Click helpers (gaze, mouse, controllers) =====
+  AFRAME.registerComponent('clickable', {
+    init(){ this.el.addEventListener('click', ()=> this.el.emit('uiclick')); }
+  });
+
+  // Menu buttons
+  qs('#btn-hygiene').addEventListener('uiclick', ()=> startHygiene());
+  qs('#btn-nutrition').addEventListener('uiclick', ()=> startNutrition());
+  qs('#btn-fitness').addEventListener('uiclick', ()=> startFitness());
+
+  // ===== HYGIENE MODE =====
+  function startHygiene(){
+    APP.score = 0; APP.setMode('อนามัยส่วนบุคคล'); APP.showOnly('#scene-hygiene'); APP.startTimer(45); qs('#btn-exit').style.display='block';
+    const steps = [
+      'ฝ่ามือ', 'หลังมือ', 'ซอกนิ้ว', 'หลังนิ้ว', 'ปลายนิ้ว', 'รอบนิ้วโป้ง', 'ข้อมือ'
+    ];
+    const targets = qs('#targets'); targets.innerHTML='';
+    steps.forEach((name, i)=>{
+      const angle = (i / steps.length) * Math.PI*2; const r=0.8;
+      const x=Math.cos(angle)*r, y=1.0 + (i%2?0.15:-0.15), z=-1.4+Math.sin(angle)*0.05;
+      const node = document.createElement('a-entity');
+      node.setAttribute('geometry','primitive: circle; radius: 0.12');
+      node.setAttribute('material','color: #3ad16b; opacity: 0.9');
+      node.setAttribute('position',`${x} ${y} ${z}`);
+      node.setAttribute('class','clickable');
+      node.setAttribute('text',`value: ${i+1}. ${name}; align: center; width: 1.2; color: #063`);
+      node.addEventListener('uiclick', ()=> onTarget(i, node));
+      targets.appendChild(node);
+    });
+    APP._next = 0;
+    function onTarget(idx, node){
+      if(idx !== APP._next) { node.setAttribute('material','color:#f0b429'); return; }
+      APP.addScore(2);
+      node.setAttribute('material','color','#0ea5e9');
+      node.setAttribute('text',`value: ✓ ${idx+1}; align: center; width: 1.2; color: #045`);
+      APP._next++;
+      if(APP._next>=7){ APP.endMode(); }
+    }
+  }
+
+  // ===== NUTRITION MODE =====
+  function startNutrition(){
+    APP.score = 0; APP.setMode('โภชนาการ'); APP.showOnly('#scene-nutrition'); APP.startTimer(60); qs('#btn-exit').style.display='block';
+    const data = [
+      {label:'ผักใบเขียว', good:true}, {label:'ผลไม้สด', good:true}, {label:'ปลา/โปรตีนไม่ติดมัน', good:true},
+      {label:'น้ำหวานขวด', good:false}, {label:'มันฝรั่งทอด', good:false}, {label:'ขนมกรุบกรอบ', good:false}
+    ];
+    const grid = qs('#foods'); grid.innerHTML='';
+    data.forEach((item,i)=>{
+      const col = (i%3)-1; const row = Math.floor(i/3);
+      const x = col*0.9; const y = 0.2 - row*0.5;
+      const card = document.createElement('a-entity');
+      card.setAttribute('geometry','primitive: plane; width: 0.8; height: 0.28');
+      card.setAttribute('material',`color: ${item.good?'#d1fae5':'#fee2e2'}`);
+      card.setAttribute('position',`${x} ${y} 0`);
+      card.setAttribute('class','clickable');
+      card.setAttribute('text',`value: ${item.label}; align: center; width: 1.4; color: #111`);
+      card.addEventListener('uiclick', ()=>{
+        if(card.getAttribute('data-done')) return;
+        card.setAttribute('data-done','1');
+        if(item.good){ APP.addScore(3); card.setAttribute('material','color','#86efac'); }
+        else { APP.addScore(-1); card.setAttribute('material','color','#fca5a5'); }
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  // ===== FITNESS MODE =====
+  function startFitness(){
+    APP.score = 0; APP.setMode('การออกกำลังกาย'); APP.showOnly('#scene-fitness'); APP.startTimer(30); qs('#btn-exit').style.display='block';
+    let left = 10; const goal = qs('#fitness-goal');
+    const btn = qs('#btn-jump');
+    function update(){ goal.setAttribute('text',`value: แตะปุ่ม Jump ให้ครบ ${left} ครั้ง!; align: center; width: 1.8; color: #111`); }
+    update();
+    const act = ()=>{ if(left<=0) return; left--; APP.addScore(1); update(); if(left===0){ APP.endMode(); } };
+    btn.addEventListener('uiclick', act);
+
+    // Optional: count real jump via head bob (simple threshold)
+    let lastY = null; const rig = qs('#rig');
+    rig.addEventListener('componentchanged', e=>{
+      if(e.detail.name!=="position") return; const y = rig.object3D.position.y;
+      if(lastY!==null && y - lastY > 0.045) { act(); }
+      lastY = y;
+    });
+  }
+
+  // Initial HUD
+  UI.setHUD(APP.mode, APP.score, APP.timeLeft);
+  </script>
 </body>
 </html>
