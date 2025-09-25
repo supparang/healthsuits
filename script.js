@@ -4,7 +4,7 @@ const TEXT_SIZE = {
   title:  0.010,
   hint:   0.025,
   label:  0.010,
-  button: 0.010
+  button: 0.005
 };
 
 /* ===== Helpers: troika-text compatible creator ===== */
