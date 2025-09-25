@@ -1,33 +1,4 @@
 // ===== Utilities =====
-const angle = (i / steps.length) * Math.PI*2; const r=0.8;
-const x=Math.cos(angle)*r, y=1.0 + (i%2?0.15:-0.15), z=-1.4+Math.sin(angle)*0.05;
-const node = document.createElement('a-entity');
-node.setAttribute('geometry','primitive: circle; radius: 0.12');
-node.setAttribute('material','color: #3ad16b; opacity: 0.9');
-node.setAttribute('position',`${x} ${y} ${z}`);
-node.setAttribute('class','clickable');
-node.setAttribute('text',`value: ${i+1}. ${name}; align: center; width: 1.2; color: #063`);
-node.addEventListener('uiclick', ()=> onTarget(i, node));
-targets.appendChild(node);
-});
-APP._next = 0;
-function onTarget(idx, node){
-if(idx !== APP._next) { node.setAttribute('material','color','#f0b429'); return; }
-APP.addScore(2); // base 2 → scaled by difficulty
-node.setAttribute('material','color','#0ea5e9');
-node.setAttribute('text',`value: ✓ ${idx+1}; align: center; width: 1.2; color: #045`);
-APP._next++;
-if(APP._next>=7){ APP.endMode(); }
-}
-}
-
-
-function startNutrition(){
-APP.current='nutrition'; APP.score = 0; APP.setMode('โภชนาการ'); APP.showOnly('#scene-nutrition'); qs('#btn-exit').style.display='block';
-const secs = DIFFS[APP.difficulty].timers.nutrition; APP.startTimer(secs);
-const data = [
-{label:'ผักใบเขียว', good:true, img:'#img-veg'},
-{label:'ผลไม้สด', good:true, img:'#img-fruit'},
 {label:'ปลา/โปรตีนไม่ติดมัน', good:true, img:'#img-fish'},
 {label:'น้ำหวานขวด', good:false, img:'#img-soda'},
 {label:'มันฝรั่งทอด', good:false, img:'#img-fries'},
@@ -89,6 +60,22 @@ lastY = y;
 }
 
 
-// Init
+// Keep menu always in front even after orientation changes
+function ensureMenuInFront(){
+const rig = qs('#rig'); const menu = qs('#menu');
+if(!rig || !menu) return;
+// Force menu to be ~1.2m in front of camera
+menu.object3D.position.set(0,0,-1.2);
+menu.object3D.rotation.set(0,0,0);
+}
+
+
 UI.setHUD(APP.mode, APP.score, APP.timeLeft, APP.difficulty);
 bindMenu();
+ensureMenuInFront();
+
+
+// Re‑apply when entering/exiting VR or device orientation changes
+window.addEventListener('orientationchange', ensureMenuInFront);
+document.querySelector('a-scene').addEventListener('enter-vr', ensureMenuInFront);
+document.querySelector('a-scene').addEventListener('exit-vr', ensureMenuInFront);
