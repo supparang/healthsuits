@@ -1,13 +1,24 @@
-/* ===== Helpers: สร้างเอนทิตี + รองรับ troika-text อัตโนมัติ ===== */
+/* ===== Global text sizes (meters) – ปรับตรงนี้ทีเดียวทั้งเกม ===== */
+const TEXT_SIZE = {
+  hud:    0.034,
+  title:  0.036,
+  hint:   0.032,
+  label:  0.032,
+  button: 0.034
+};
+
+/* ===== Helpers: troika-text compatible creator ===== */
 function $(sel){ return document.querySelector(sel); }
 
 function setAttrCompat(element, name, value){
-  // แปลง text → troika-text (รองรับภาษาไทย)
+  // แปลง A-Frame text → troika-text (รองรับภาษาไทย) + อัด fontSize ถ้ายังไม่กำหนด
   if (name === 'text') {
-    value = String(value)
+    let s = String(value)
       .replace(/(^|;)\s*align\s*:/g, '$1 anchor:')
       .replace(/(^|;)\s*width\s*:/g, '$1 maxWidth:');
+    if (!/fontSize\s*:/.test(s)) s += `; fontSize: ${TEXT_SIZE.label}`;
     name = 'troika-text';
+    value = s;
   }
   element.setAttribute(name, value);
 }
@@ -26,7 +37,7 @@ function el(tag, attrs={}, children=[]){
   return e;
 }
 
-/* ===== ทำให้เดสก์ท็อปคลิกได้แน่นอน (cursor+raycaster) ===== */
+/* ===== Desktop cursor/raycaster ===== */
 AFRAME.registerComponent('ensure-cursor', {
   init(){
     const cam = $('#camera');
@@ -37,24 +48,21 @@ AFRAME.registerComponent('ensure-cursor', {
   }
 });
 
-/* ===== Core Gameflow System ===== */
+/* ===== Core Gameflow ===== */
 AFRAME.registerSystem('gameflow', {
   init(){
     this.state = 'menu';         // menu | hygiene | nutrition | exercise
     this.timeLeft = 0;
     this.score = 0;
     this.activeGame = null;
-
-    // ถ้า HUD อื่นยังไม่ถูกสร้าง (บน index.html มีแล้ว) ข้ามได้
-    // แต่เพื่อความชัวร์ อัปเดตค่าปัจจุบัน
     this.updateHUD();
   },
   setState(s){
     this.state = s;
-    $('#hudState')?.setAttribute('troika-text', 'value:โหมด: ' + s + '; color:#FFFFFF; anchor:center; maxWidth:2');
+    $('#hudState')?.setAttribute('troika-text',
+      `value:โหมด: ${s}; color:#FFFFFF; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hud}`);
     ['menu','hygiene','nutrition','exercise'].forEach(id=>{
-      const grp = $('#grp_'+id);
-      if (grp) grp.setAttribute('visible', id===s);
+      $('#grp_'+id)?.setAttribute('visible', id===s);
     });
   },
   startGame(kind, secs){
@@ -68,34 +76,33 @@ AFRAME.registerSystem('gameflow', {
     if (kind==='exercise') this.activeGame = ExerciseGame.start(this);
   },
   endGame(message='จบเกม'){
-    const score = this.score;
-    alert(`${message}\nคะแนนของคุณ: ${score}`);
+    alert(`${message}\nคะแนนของคุณ: ${this.score}`);
     if (this.activeGame?.stop) this.activeGame.stop();
     this.activeGame = null;
     this.setState('menu');
   },
   addScore(n=1){ this.score += n; this.updateHUD(); },
   updateHUD(){
-    $('#hudScore')?.setAttribute('troika-text', `value:คะแนน: ${this.score}; color:#FFFFFF; anchor:center; maxWidth:2`);
-    $('#hudTime')?.setAttribute('troika-text', `value:เวลา: ${Math.max(0, Math.ceil(this.timeLeft))}s; color:#FFFFFF; anchor:center; maxWidth:2`);
+    $('#hudScore')?.setAttribute('troika-text',
+      `value:คะแนน: ${this.score}; color:#FFFFFF; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hud}`);
+    $('#hudTime')?.setAttribute('troika-text',
+      `value:เวลา: ${Math.max(0, Math.ceil(this.timeLeft))}s; color:#FFFFFF; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hud}`);
   }
 });
 
-/* ===== Global tick: countdown timer ===== */
+/* ===== Global countdown ===== */
 AFRAME.registerComponent('tick-timer', {
   tick(t, dt){
     const sys = this.el.sceneEl.systems.gameflow;
     if (['hygiene','nutrition','exercise'].includes(sys.state) && sys.timeLeft>0){
       sys.timeLeft -= dt/1000;
       sys.updateHUD();
-      if (sys.timeLeft<=0){
-        sys.endGame('หมดเวลา!');
-      }
+      if (sys.timeLeft<=0) sys.endGame('หมดเวลา!');
     }
   }
 });
 
-/* ===== Hand gestures (wave เพื่อหยุด/กลับเมนู แบบทางเลือก) ===== */
+/* ===== Hand gestures (optional wave-back) ===== */
 AFRAME.registerComponent('hand-gestures', {
   init(){ this.cool=0; },
   tick(t,dt){
@@ -106,28 +113,24 @@ AFRAME.registerComponent('hand-gestures', {
     const wrist = right.components['hand-tracking-controls']?.wristPosition;
     if (wrist && this.prevX!==undefined){
       const speedX = Math.abs(wrist.x - this.prevX) / (dt/1000);
-      if (speedX>0.6 && this.cool===0){
-        this.cool = 1500;
-        sys.endGame('หยุด/กลับเมนู');
-      }
+      if (speedX>0.6 && this.cool===0){ this.cool = 1500; sys.endGame('หยุด/กลับเมนู'); }
     }
     if (wrist) this.prevX = wrist.x;
   }
 });
 
-/* ===== ปุ่มเมนู ===== */
+/* ===== Menu buttons ===== */
 window.goMode = function(mode){
   const sys = $('a-scene').systems.gameflow;
-  if (mode==='hygiene') sys.startGame('hygiene', 90);
-  if (mode==='nutrition') sys.startGame('nutrition', 90);
+  if (mode==='hygiene')  sys.startGame('hygiene', 90);
+  if (mode==='nutrition')sys.startGame('nutrition', 90);
   if (mode==='exercise') sys.startGame('exercise', 90);
 };
 
 /* =========================
-   MiniGame #1: Hygiene (ล้างมือ 7 ขั้น + ระดับความยาก)
+   MiniGame #1: Hygiene (ล้างมือ 7 ขั้น + ความยาก)
    ========================= */
 const HygieneGame = (function(){
-  // 7 ขั้นพื้นฐาน
   const BASE_STEPS = [
     {key:'palm',    label:'ฝ่ามือถูฝ่ามือ'},
     {key:'back',    label:'ถูหลังมือ'},
@@ -137,34 +140,33 @@ const HygieneGame = (function(){
     {key:'wrist',   label:'ถูรอบข้อมือ'},
     {key:'rinse',   label:'ล้าง/เช็ดให้แห้ง'}
   ];
-
-  // ตั้งค่าความยาก
   const DIFF = {
     easy:   { radius:0.16, holdMs:  0, shuffle:false, timeBonus: 5, scoreAdd: 5, distractors:0 },
     normal: { radius:0.13, holdMs:150, shuffle:false, timeBonus: 3, scoreAdd: 6, distractors:1 },
     hard:   { radius:0.10, holdMs:350, shuffle:true,  timeBonus: 2, scoreAdd: 7, distractors:3, penalty:-3 }
   };
 
-  let group=null, idx=0, steps=[], targets=[], currentBtn=null, holdTimer=null, diffKey='normal';
-  let hintText=null, titleText=null, chooser=null, distractorEls=[];
+  let group=null, idx=0, steps=[], targets=[], holdTimer=null, diffKey='normal';
+  let hintText=null, titleText=null, chooser=null;
 
-  // UI เลือกความยาก
   function buildDifficultyChooser(){
     chooser = el('a-entity', {position:'0 1.35 -1.15'});
-    chooser.appendChild(el('a-entity', {text:'value:เลือกความยาก; color:#FFFFFF; anchor:center; maxWidth:2'}));
-
+    chooser.appendChild(el('a-entity', {
+      text:`value:เลือกความยาก; color:#FFFFFF; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`
+    }));
     const defs = [
-      {x:-0.6, key:'easy',   label:'ง่าย',   color:'#06D6A0'},
-      {x: 0.0, key:'normal', label:'ปกติ',  color:'#FFD166'},
-      {x: 0.6, key:'hard',   label:'ยาก',   color:'#EF476F'}
+      {x:-0.6, key:'easy',   label:'ง่าย',  color:'#06D6A0'},
+      {x: 0.0, key:'normal', label:'ปกติ', color:'#FFD166'},
+      {x: 0.6, key:'hard',   label:'ยาก',  color:'#EF476F'}
     ];
     defs.forEach(d=>{
       const btn = el('a-box', {class:'clickable', position:`${d.x} -0.25 0`, width:0.6, height:0.22, depth:0.08, color:d.color}, [
-        el('a-entity', {position:'0 0 0.06', text:`value:${d.label}; anchor:center; maxWidth:1.4`})
+        el('a-entity', {position:'0 0 0.06',
+          text:`value:${d.label}; anchor:center; maxWidth:1.4; fontSize: ${TEXT_SIZE.button}`})
       ]);
       btn.addEventListener('click', ()=>{
         diffKey = d.key;
-        if (chooser && chooser.parentNode) chooser.parentNode.removeChild(chooser);
+        chooser?.parentNode?.removeChild(chooser);
         startRound();
       });
       chooser.appendChild(btn);
@@ -172,11 +174,11 @@ const HygieneGame = (function(){
     group.appendChild(chooser);
   }
 
-  // เป้าหมายแต่ละขั้น
   function makeTarget(pos, text, key, radius, holdMs){
     const wrap = el('a-entity', {position:pos});
     const plate = el('a-circle', {radius:radius, color:'#88E0FF', class:'clickable'});
-    const label = el('a-entity', {position:'0 -0.24 0', text:`value:${text}; anchor:center; maxWidth:2; color:#FFFFFF`});
+    const label = el('a-entity', {position:'0 -0.24 0',
+      text:`value:${text}; anchor:center; maxWidth:2; color:#FFFFFF; fontSize: ${TEXT_SIZE.label}`});
     wrap.appendChild(plate); wrap.appendChild(label);
 
     const startHold = ()=>{
@@ -210,7 +212,6 @@ const HygieneGame = (function(){
     return wrap;
   }
 
-  // สิ่งรบกวน
   function makeDistractor(pos){
     const d = el('a-sphere', {class:'clickable', position:pos, radius:0.08, color:'#FF595E'});
     d.addEventListener('click', ()=>{
@@ -232,18 +233,20 @@ const HygieneGame = (function(){
   }
 
   function hint(msg){
-    hintText?.setAttribute('troika-text', `value:${msg}; anchor:center; maxWidth:2`);
+    hintText?.setAttribute('troika-text',
+      `value:${msg}; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hint}`);
   }
 
   function updateHighlight(){
     targets.forEach((t,i)=>{
-      const c = (i===idx)? '#00FFC6' : '#88E0FF';
-      t.__plate.setAttribute('color', c);
+      t.__plate.setAttribute('color', i===idx ? '#00FFC6' : '#88E0FF');
     });
     const next = steps[idx]?.label || 'เสร็จแล้ว!';
-    titleText?.setAttribute('troika-text', `value:ล้างมือให้ครบลำดับ — ขั้นต่อไป: ${next}; anchor:center; maxWidth:2`);
+    titleText?.setAttribute('troika-text',
+      `value:ล้างมือให้ครบลำดับ — ขั้นต่อไป: ${next}; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`);
   }
 
+  let targets=[];
   function startRound(){
     group.innerHTML = '';
 
@@ -251,34 +254,34 @@ const HygieneGame = (function(){
     if (DIFF[diffKey].shuffle) steps = shuffle(steps);
     idx = 0;
 
-    titleText = el('a-entity', {position:'0 1.1 -1.2', text:'value:ล้างมือให้ครบลำดับ — เล็งวงสีเขียว; anchor:center; maxWidth:2'});
-    hintText  = el('a-entity', {position:'0 0.95 -1.2', text:'value:แตะ/กดค้างที่เป้า (ยากจะต้องค้างนานขึ้น); anchor:center; maxWidth:2'});
+    titleText = el('a-entity', {position:'0 1.1 -1.2',
+      text:`value:ล้างมือให้ครบลำดับ — เล็งวงสีเขียว; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
+    hintText  = el('a-entity', {position:'0 0.95 -1.2',
+      text:`value:แตะ/กดค้างที่เป้า (ยากจะต้องค้างนานขึ้น); anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hint}`});
     group.appendChild(titleText);
     group.appendChild(hintText);
 
     const positions = [
-      ' -0.6 1.45 -1.2', ' -0.2 1.45 -1.2', ' 0.2 1.45 -1.2',
-      ' 0.6 1.45 -1.2',  ' -0.4 1.15 -1.2',' 0.0 1.15 -1.2',' 0.4 1.15 -1.2'
+      ' -0.6 1.45 -1.2',' -0.2 1.45 -1.2',' 0.2 1.45 -1.2',
+      ' 0.6 1.45 -1.2',' -0.4 1.15 -1.2',' 0.0 1.15 -1.2',' 0.4 1.15 -1.2'
     ];
     const cfg = DIFF[diffKey];
     targets = steps.map((s,i)=> makeTarget(positions[i], s.label, s.key, cfg.radius, cfg.holdMs));
     targets.forEach(t=>group.appendChild(t));
 
-    // สิ่งรบกวน (โหมดยาก/เมื่อกำหนด)
     for (let i=0;i<(cfg.distractors||0);i++){
       const x = -0.8 + Math.random()*1.6;
       const y =  1.0 + Math.random()*0.6;
       group.appendChild(makeDistractor(`${x.toFixed(2)} ${y.toFixed(2)} -1.2`));
     }
-
     updateHighlight();
   }
 
+  let titleText=null, hintText=null;
   return {
-    start(sys){
+    start(){
       group = $('#grp_hygiene');
       group.innerHTML = '';
-      // เลือกความยากก่อน
       buildDifficultyChooser();
       return { stop(){ group && (group.innerHTML=''); } };
     }
@@ -297,51 +300,52 @@ const NutritionGame = (function(){
     {id:'fat', label:'ไขมันดี'}
   ];
   const ITEMS = [
-    {name:'ข้าวสวย', cat:'carb'}, {name:'ขนมปังโฮลวีต', cat:'carb'},
-    {name:'ไก่อบ', cat:'protein'}, {name:'เต้าหู้', cat:'protein'}, {name:'ปลาอบ', cat:'protein'},
-    {name:'กล้วย', cat:'vegfruit'}, {name:'แอปเปิล', cat:'vegfruit'}, {name:'ผักกาดหอม', cat:'vegfruit'},
-    {name:'นมถั่วเหลือง', cat:'dairy'}, {name:'โยเกิร์ตรสธรรมชาติ', cat:'dairy'},
-    {name:'อะโวคาโด', cat:'fat'}, {name:'ถั่วอัลมอนด์', cat:'fat'}
+    {name:'ข้าวสวย', cat:'carb'},{name:'ขนมปังโฮลวีต', cat:'carb'},
+    {name:'ไก่อบ', cat:'protein'},{name:'เต้าหู้', cat:'protein'},{name:'ปลาอบ', cat:'protein'},
+    {name:'กล้วย', cat:'vegfruit'},{name:'แอปเปิล', cat:'vegfruit'},{name:'ผักกาดหอม', cat:'vegfruit'},
+    {name:'นมถั่วเหลือง', cat:'dairy'},{name:'โยเกิร์ตรสธรรมชาติ', cat:'dairy'},
+    {name:'อะโวคาโด', cat:'fat'},{name:'ถั่วอัลมอนด์', cat:'fat'}
   ];
-  let group=null, qText=null, choiceBtns=[], current=null, asked=0, maxQ=10;
+  let group=null, qText=null, current=null, asked=0, maxQ=10;
 
   function makeChoice(x, label, cat){
-    const btn = el('a-box', {class:'clickable', position:`${x} 0.6 -1.1`, width:0.7, height:0.22, depth:0.08, color:'#3A86FF'});
-    btn.appendChild(el('a-entity',{position:'0 0 0.06', text:`value:${label}; anchor:center; maxWidth:1.6`}));
+    const btn = el('a-box', {class:'clickable', position:`${x} 0.6 -1.1`,
+      width:0.7, height:0.22, depth:0.08, color:'#3A86FF'});
+    btn.appendChild(el('a-entity',{position:'0 0 0.06',
+      text:`value:${label}; anchor:center; maxWidth:1.6; fontSize: ${TEXT_SIZE.button}`}));
     btn.addEventListener('click', ()=>{
       const sys = $('a-scene').systems.gameflow;
       if (!current) return;
-      if (current.cat===cat){
-        sys.addScore(10);
-        hint(`ถูกต้อง! ${current.name} → ${label}`);
-      } else {
-        hint(`ยังไม่ใช่ ลองใหม่: ${current.name}`);
-      }
+      if (current.cat===cat){ sys.addScore(10); hint(`ถูกต้อง! ${current.name} → ${label}`); }
+      else { hint(`ยังไม่ใช่ ลองใหม่: ${current.name}`); }
       nextQuestion();
     });
     return btn;
   }
   function hint(msg){
-    $('#grp_nutrition_hint')?.setAttribute('troika-text', `value:${msg}; anchor:center; maxWidth:2`);
+    $('#grp_nutrition_hint')?.setAttribute('troika-text',
+      `value:${msg}; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hint}`);
   }
   function nextQuestion(){
     const sys = $('a-scene').systems.gameflow;
     asked++;
     if (asked>maxQ){ sys.endGame('ควิซโภชนาการครบแล้ว!'); return; }
     current = ITEMS[Math.floor(Math.random()*ITEMS.length)];
-    qText.setAttribute('troika-text', `value:จัดหมวด: ${current.name}; anchor:center; maxWidth:2`);
+    qText.setAttribute('troika-text',
+      `value:จัดหมวด: ${current.name}; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`);
   }
 
   return {
-    start(sys){
+    start(){
       group = $('#grp_nutrition');
       group.innerHTML = '';
-      qText = el('a-entity',{position:'0 1.15 -1.2', text:'value:จัดหมวด: ...; anchor:center; maxWidth:2'});
-      const hintText = el('a-entity',{id:'grp_nutrition_hint', position:'0 0.95 -1.2', text:'value:แตะเลือกหมวดให้ถูกต้อง; anchor:center; maxWidth:2'});
+      qText = el('a-entity',{position:'0 1.15 -1.2',
+        text:`value:จัดหมวด: ...; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
+      const hintText = el('a-entity',{id:'grp_nutrition_hint', position:'0 0.95 -1.2',
+        text:`value:แตะเลือกหมวดให้ถูกต้อง; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.hint}`});
       group.appendChild(qText); group.appendChild(hintText);
       const xs = [-0.9, -0.45, 0, 0.45, 0.9];
-      choiceBtns = CATS.map((c,i)=> makeChoice(xs[i], c.label, c.id));
-      choiceBtns.forEach(b=>group.appendChild(b));
+      CATS.map((c,i)=> makeChoice(xs[i], c.label, c.id)).forEach(b=>group.appendChild(b));
       asked=0; nextQuestion();
       return { stop(){ group && (group.innerHTML=''); } };
     }
@@ -353,7 +357,7 @@ const NutritionGame = (function(){
    ========================= */
 const ExerciseGame = (function(){
   const TARGET_POS = [
-    '-0.5 1.4 -1.0', '0.5 1.4 -1.0', '0 1.8 -1.0', '-0.3 1.2 -1.0', '0.3 1.2 -1.0'
+    '-0.5 1.4 -1.0','0.5 1.4 -1.0','0 1.8 -1.0','-0.3 1.2 -1.0','0.3 1.2 -1.0'
   ];
   const POSES = [
     {name:'Jumping Jacks', seq:[0,1,2,0,1,2]},
@@ -369,10 +373,9 @@ const ExerciseGame = (function(){
   }
   function currentTargetIdx(){ return POSES[poseIdx].seq[stepIdx]; }
   function highlight(){
-    markers.forEach((m,i)=>{
-      m.setAttribute('color', i===currentTargetIdx()? '#06D6A0' : '#FFD166');
-    });
-    info?.setAttribute('troika-text', `value:${POSES[poseIdx].name} — เป้าหมายที่ ${stepIdx+1}/${POSES[poseIdx].seq.length}; anchor:center; maxWidth:2`);
+    markers.forEach((m,i)=> m.setAttribute('color', i===currentTargetIdx()? '#06D6A0' : '#FFD166'));
+    info?.setAttribute('troika-text',
+      `value:${POSES[poseIdx].name} — เป้าหมายที่ ${stepIdx+1}/${POSES[poseIdx].seq.length}; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`);
   }
   function hit(i){
     const sys = $('a-scene').systems.gameflow;
@@ -384,12 +387,8 @@ const ExerciseGame = (function(){
     markers[i].setAttribute('animation__pop', {property:'scale', to:'1.3 1.3 1.3', dur:100, dir:'alternate', loop:1});
     stepIdx++;
     if (stepIdx>=POSES[poseIdx].seq.length){
-      poseIdx++;
-      stepIdx=0;
-      if (poseIdx>=POSES.length){
-        sys.endGame('สุดยอด! ทำครบทุกท่าแล้ว');
-        return;
-      }
+      poseIdx++; stepIdx=0;
+      if (poseIdx>=POSES.length){ sys.endGame('สุดยอด! ทำครบทุกท่าแล้ว'); return; }
     }
     highlight();
   }
@@ -405,14 +404,15 @@ const ExerciseGame = (function(){
     const idx = currentTargetIdx();
     const obj = markers[idx].object3D;
     const wp = new THREE.Vector3(); obj.getWorldPosition(wp);
-    if (distance(wrist, wp) < 0.15){ hit(idx); }
+    if (distance(wrist, wp) < 0.15) hit(idx);
   }
 
   return {
-    start(sys){
+    start(){
       group = $('#grp_exercise');
       group.innerHTML = '';
-      info = el('a-entity',{position:'0 1.05 -1.1', text:'value:ทำตามเป้าให้ทันเวลา; anchor:center; maxWidth:2'});
+      info = el('a-entity',{position:'0 1.05 -1.1',
+        text:`value:ทำตามเป้าให้ทันเวลา; anchor:center; maxWidth:2; fontSize: ${TEXT_SIZE.title}`});
       group.appendChild(info);
       markers = TARGET_POS.map((p,i)=> makeMarker(p, i));
       markers.forEach(m=>group.appendChild(m));
