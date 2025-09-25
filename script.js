@@ -3,8 +3,8 @@ const TEXT_SIZE = {
   hud:    0.034,
   title:  0.036,
   hint:   0.025,
-  label:  0.025,
-  button: 0.034
+  label:  0.010,
+  button: 0.010
 };
 
 /* ===== Helpers: troika-text compatible creator ===== */
