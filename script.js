@@ -1,15 +1,31 @@
 /* ===== Utility: once scene loaded, prepare raycaster/cursor for desktop & shared helpers ===== */
 function $(sel){ return document.querySelector(sel); }
+function setAttrCompat(element, name, value){
+  // แปลง A-Frame text → troika-text สำหรับภาษาไทย
+  if (name === 'text') {
+    // map key names
+    value = String(value)
+      .replace(/(^|;)\s*align\s*:/g, '$1 anchor:')
+      .replace(/(^|;)\s*width\s*:/g, '$1 maxWidth:');
+    name = 'troika-text';
+  }
+  element.setAttribute(name, value);
+}
 function el(tag, attrs={}, children=[]){
   const e = document.createElement(tag);
   Object.entries(attrs).forEach(([k,v])=>{
-    if (k==='text' || k==='animation' || k.startsWith('animation__')) e.setAttribute(k, v);
-    else if (typeof v === 'object') e.setAttribute(k, Object.entries(v).map(([kk,vv])=>`${kk}:${vv}`).join('; '));
-    else e.setAttribute(k, v);
+    if (typeof v === 'object' && k !== 'animation' && !k.startsWith('animation__')) {
+      // แปลง object → '; ' string
+      const s = Object.entries(v).map(([kk,vv])=>`${kk}:${vv}`).join('; ');
+      setAttrCompat(e, k, s);
+    } else {
+      setAttrCompat(e, k, v);
+    }
   });
   children.forEach(c=>e.appendChild(c));
   return e;
 }
+
 
 AFRAME.registerComponent('ensure-cursor', {
   init(){
