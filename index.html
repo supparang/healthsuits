@@ -16,7 +16,7 @@
   <script src="script.js"></script>
 </head>
 <body>
-  <!-- เพิ่ม fontsize-apply ใน a-scene -->
+  <!-- เพิ่ม fontsize-apply และ ensure-cursor -->
   <a-scene renderer="antialias: true" tick-timer hand-gestures ensure-cursor fontsize-apply>
     <!-- กล้อง + ตัวชี้ -->
     <a-entity id="rig">
@@ -26,7 +26,7 @@
       <a-entity hand-tracking-controls="hand: left"></a-entity>
     </a-entity>
 
-    <!-- HUD (ไม่ใส่ fontSize ที่นี่ ให้ script จัดการ) -->
+    <!-- HUD (ปล่อยให้ script กำหนด fontSize) -->
     <a-entity id="hudState" position="0 1.70 -1.2"
               troika-text="value:โหมด: menu; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
     <a-entity id="hudScore" position="0 1.52 -1.2"
@@ -45,24 +45,24 @@
 
       <a-box class="clickable" position="0 -0.5 0" depth="0.1" height="0.25" width="0.9"
              color="#06D6A0" onclick="goMode('hygiene')">
-        <a-entity position="0 0 0.06"
+        <a-entity class="clickable" position="0 0 0.06"
                   troika-text="value:อนามัยส่วนบุคคล; anchor: center; maxWidth: 1.8"></a-entity>
       </a-box>
 
       <a-box class="clickable" position="0 -1.0 0" depth="0.1" height="0.25" width="0.9"
              color="#FFD166" onclick="goMode('nutrition')">
-        <a-entity position="0 0 0.06"
+        <a-entity class="clickable" position="0 0 0.06"
                   troika-text="value:โภชนาการ; anchor: center; maxWidth: 1.8"></a-entity>
       </a-box>
 
       <a-box class="clickable" position="0 -1.5 0" depth="0.1" height="0.25" width="0.9"
              color="#4CC9F0" onclick="goMode('exercise')">
-        <a-entity position="0 0 0.06"
+        <a-entity class="clickable" position="0 0 0.06"
                   troika-text="value:การออกกำลังกาย; anchor: center; maxWidth: 1.8"></a-entity>
       </a-box>
     </a-entity>
 
-    <!-- ฉากย่อย (เว้นว่างไว้ให้ script.js เติม) -->
+    <!-- ฉากย่อย -->
     <a-entity id="grp_hygiene" visible="false"></a-entity>
     <a-entity id="grp_nutrition" visible="false"></a-entity>
     <a-entity id="grp_exercise" visible="false"></a-entity>
