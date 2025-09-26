@@ -35,29 +35,29 @@
               material="color:#fff; shader:flat"></a-entity>
   </a-entity>
 
-  <a-entity id="hud" position="0 2.0 -1.5">
+  <a-entity id="hud" position="0 1.9 -1.5">
     <a-entity id="title" text="value: เกมล้างมือ VR; width:1.8; align:center; color:#fff"></a-entity>
-    <a-entity id="status" position="0 -0.2 0" text="value: แตะเพื่อเข้าสู่เมนู; width:1.5; align:center; color:#9cf"></a-entity>
+    <a-entity id="status" position="0 -0.2 0" text="value: แตะไปที่เมนูเพื่อเริ่ม; width:1.5; align:center; color:#9cf"></a-entity>
     <a-entity id="score" position="0 -0.4 0" text="value: คะแนน:0 | ขั้น:0/7 | เวลา:00s; width:1.5; align:center; color:#fff"></a-entity>
   </a-entity>
 
-  <a-entity id="splash" position="0 1.4 -1.6">
+  <a-entity id="splash" position="0 1.35 -1.6">
     <a-plane width="1.6" height="1.2" color="#222"></a-plane>
-    <a-entity position="0 0.4 0.01" text="value: Handwash VR; width:1.4; align:center; color:#fff"></a-entity>
+    <a-entity geometry="primitive: plane; width: 1.0; height: 0.5" material="shader: flat; src: #splash-art" position="0 0.2 0.01"></a-entity>
     <a-entity id="btnEnter" class="clickable" position="0 -0.3 0.02"
-      geometry="primitive: plane; width:0.8; height:0.3" material="color:#22c55e">
+      geometry="primitive: plane; width:0.8; height:0.28" material="color:#22c55e">
       <a-entity position="0 0 0.01" text="value: ไปที่เมนู; width:1; align:center; color:#fff"></a-entity>
     </a-entity>
   </a-entity>
 
-  <a-entity id="menu" visible="false" position="0 1.2 -2">
+  <a-entity id="menu" visible="false" position="0 1.15 -2">
     <a-entity id="btnStart" class="clickable" position="0 0.2 0"
       geometry="primitive: plane; width:1; height:0.3" material="color:#22c55e">
-      <a-entity position="0 0 0.01" text="value: เริ่มเกม; width:1.2; align:center; color:#fff"></a-entity>
+      <a-entity position="0 0 0.01" text="value: เริ่มเกม (จับเวลา); width:1.2; align:center; color:#fff"></a-entity>
     </a-entity>
     <a-entity id="btnTutorial" class="clickable" position="0 -0.2 0"
       geometry="primitive: plane; width:1; height:0.3" material="color:#0ea5e9">
-      <a-entity position="0 0 0.01" text="value: โหมดฝึก; width:1.2; align:center; color:#fff"></a-entity>
+      <a-entity position="0 0 0.01" text="value: โหมดฝึก (ไม่มีเวลา); width:1.2; align:center; color:#fff"></a-entity>
     </a-entity>
   </a-entity>
 
