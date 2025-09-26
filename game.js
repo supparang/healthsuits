@@ -93,6 +93,19 @@ AFRAME.registerComponent('click-bindings', {
 function $(sel){ return document.querySelector(sel); }
 function setVisible(id, v){ const el=$(id); if (el) el.setAttribute('visible', v); }
 
+function setMenuClickables(enabled){
+  const ids = ['#btn-play','#btn-practice','#btn-howto','#btn-back-menu'];
+  ids.forEach(id => {
+    const el = document.querySelector(id);
+    if (!el) return;
+    const cls = el.getAttribute('class') || '';
+    const has = cls.split(' ').includes('clickable');
+    if (enabled && !has) el.setAttribute('class', (cls + ' clickable').trim());
+    if (!enabled && has) el.setAttribute('class', cls.split(' ').filter(c=>c!=='clickable').join(' '));
+  });
+}
+
+
 function showMenu(){
   APP.state='menu';
   setVisible('#ui-splash', false);
@@ -100,10 +113,12 @@ function showMenu(){
   setVisible('#arena', false);
   setVisible('#hud', false);
   setVisible('#ui-menu', true);
+  setMenuClickables(true);
   stopAudio();
 }
 
 function showHowto(){
+  setMenuClickables(true);
   APP.state='howto';
   setVisible('#ui-menu', false);
   setVisible('#ui-howto', true);
@@ -120,6 +135,7 @@ function updateHUD(){
 }
 
 function startGame(mode){
+  setMenuClickables(false);
   APP.mode = mode;
   APP.state = 'playing';
   APP.timer = (mode==='game') ? 60 : 0;
