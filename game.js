@@ -1,12 +1,11 @@
-/* Healthy Hero VR: Handwash 7 Steps (P.5)
-   A-Frame 1.5.0
-   - Two modes: Practice (no timer) and Timed (60s)
-   - HUD shows mode, time, score
-   - 7 steps sequence with visual nodes; green = next step
-   - Correct => +10, Wrong => -5
-   - Summary with stars (1–3)
+/* Healthy Hero VR — Handwashing 7 Steps (Grade 5)
+   WebXR with A-Frame 1.5.0
+   English UI, improved splash/menu flow, checked visibility and logic.
 */
 (function(){
+  const SFX = {
+    ding: null, buzz: null, click: null
+  };
   const APP = {
     mode: "practice",       // 'practice' | 'timed'
     step: 1,                // 1..7
@@ -19,10 +18,15 @@
   };
 
   const $ = (id)=> document.getElementById(id);
+  function visible(id, v){ $(id).setAttribute('visible', v); }
+  function setText(id, v){ $(id).setAttribute('value', v); }
+  function setImageStep(step){
+    const img = APP.stepImages[step-1] || APP.stepImages[0];
+    $('stepImage').setAttribute('material', 'src', img);
+  }
 
-  // Simple button component with hover/fuse feedback
   AFRAME.registerComponent('handwash-button', {
-    schema: { label: {type:'string', default:'ปุ่ม'} },
+    schema: { label: {type:'string', default:'Button'}, id:{type:'string', default:''} },
     init: function(){
       const el = this.el;
       const label = this.data.label;
@@ -30,31 +34,34 @@
       text.setAttribute('value', label);
       text.setAttribute('align','center');
       text.setAttribute('color','#ffffff');
-      text.setAttribute('width','0.7');
+      text.setAttribute('width','0.8');
       text.setAttribute('position','0 0 0.01');
       el.appendChild(text);
 
       el.setAttribute('class', (el.getAttribute('class')||'') + ' clickable');
-      el.setAttribute('event-set__enter', 'scale: 1.05 1.05 1');
+      el.setAttribute('event-set__enter', 'scale: 1.06 1.06 1');
       el.setAttribute('event-set__leave', 'scale: 1 1 1');
 
       el.addEventListener('click', ()=>{
-        if (el.id === 'btnPractice') { startGame('practice'); }
-        else if (el.id === 'btnTimed') { startGame('timed'); }
-        else if (el.id === 'btnReplay') { restart(); }
-        else if (el.id === 'btnMenu') { gotoMenu(); }
+        playSfx('click');
+        const bid = this.data.id || el.id;
+        switch (bid) {
+          case 'practice': startGame('practice'); break;
+          case 'timed': startGame('timed'); break;
+          case 'how': showPanel('howto'); break;
+          case 'credits': showPanel('credits'); break;
+          default:
+            if (el.id === 'btnReplay') restart();
+            else if (el.id === 'btnMenu') gotoMenu();
+            else if (el.id === 'btnBackHow' || el.id === 'btnBackCredits') backToMenu();
+        }
       });
     }
   });
 
-  // Create 7 nodes dynamically and manage interactions
   AFRAME.registerComponent('handwash-nodes', {
     init: function(){
       const el = this.el;
-      const positions = [
-        {-0.65:0} // dummy to align 1-indexed; we'll ignore index 0
-      ];
-      // Predefined around the bottom area for visibility
       const posList = [
         [-0.60,  0.00, 0.02],
         [-0.35,  0.00, 0.02],
@@ -62,13 +69,13 @@
         [ 0.15,  0.00, 0.02],
         [ 0.40,  0.00, 0.02],
         [ 0.65,  0.00, 0.02],
-        [ 0.00, -0.10, 0.02]
+        [ 0.00, -0.12, 0.02]
       ];
       for(let i=1;i<=7;i++){
         const n = document.createElement('a-entity');
         n.setAttribute('id', 'node'+i);
         n.setAttribute('class', 'clickable');
-        n.setAttribute('geometry','primitive: circle; radius: 0.04');
+        n.setAttribute('geometry','primitive: circle; radius: 0.042');
         n.setAttribute('material','color:#6b7280; opacity:0.95');
         n.setAttribute('position', `${posList[i-1][0]} ${posList[i-1][1]} ${posList[i-1][2]}`);
 
@@ -76,7 +83,7 @@
         label.setAttribute('value', i.toString());
         label.setAttribute('align','center');
         label.setAttribute('color','#ffffff');
-        label.setAttribute('width','0.3');
+        label.setAttribute('width','0.32');
         label.setAttribute('position','0 0 0.01');
         n.appendChild(label);
 
@@ -87,13 +94,6 @@
     }
   });
 
-  function setVisible(id, v){ $(id).setAttribute('visible', v); }
-  function setText(id, v){ $(id).setAttribute('value', v); }
-  function setImageStep(step){
-    const img = APP.stepImages[step-1] || APP.stepImages[0];
-    $('stepImage').setAttribute('material', 'src', img);
-  }
-
   function startGame(mode){
     APP.mode = mode;
     APP.step = 1;
@@ -103,10 +103,10 @@
     APP.timeLeft = 60;
     setImageStep(1);
 
-    setVisible('splash', false);
-    setVisible('result', false);
-    setVisible('board', true);
-    setVisible('hud', true);
+    // Hide all non-game panels
+    ['splash','howto','credits','result'].forEach(id=>visible(id,false));
+    visible('board', true);
+    visible('hud', true);
 
     refreshNodes();
     refreshHUD();
@@ -126,26 +126,27 @@
   }
 
   function refreshHUD(){
-    setText('hudMode', `โหมด: ${APP.mode==='timed'?'จับเวลา (60s)':'ฝึก (ไม่จับเวลา)'}`);
-    setText('hudScore', `คะแนน: ${APP.score}`);
-    setText('hudTime', APP.mode==='timed' ? `เวลา: ${APP.timeLeft}s` : 'เวลา: ∞');
+    setText('hudMode', `Mode: ${APP.mode==='timed'?'Timed (60s)':'Practice'}`);
+    setText('hudScore', `Score: ${APP.score}`);
+    setText('hudTime', APP.mode==='timed' ? `Time: ${APP.timeLeft}s` : 'Time: ∞');
   }
 
   function refreshNodes(){
     for(let i=1;i<=7;i++){
       const n = $('node'+i);
       const isNext = (i===APP.step);
-      n.setAttribute('material', 'color', isNext ? '#10b981' : '#6b7280'); // green for next
-      n.setAttribute('scale', isNext ? '1.2 1.2 1' : '1 1 1');
+      if (!n) continue;
+      n.setAttribute('material', 'color', isNext ? '#10b981' : '#6b7280');
+      n.setAttribute('scale', isNext ? '1.18 1.18 1' : '1 1 1');
     }
   }
 
   function onNodeClick(i, nodeEl){
     if(!APP.started) return;
     if(i===APP.step){
-      // correct
       APP.score += 10;
-      setFlash(nodeEl, true);
+      flash(nodeEl, true);
+      playSfx('ding');
       APP.step++;
       if(APP.step>7){
         finishGame();
@@ -154,87 +155,91 @@
         refreshNodes();
       }
     } else {
-      // wrong
       APP.score = Math.max(0, APP.score - 5);
       APP.wrong++;
-      setFlash(nodeEl, false);
+      flash(nodeEl, false);
+      playSfx('buzz');
     }
     refreshHUD();
   }
 
-  function setFlash(nodeEl, ok){
+  function flash(nodeEl, ok){
     nodeEl.setAttribute('material','color', ok ? '#22c55e' : '#ef4444');
     nodeEl.setAttribute('animation__pulse', {
       property: 'scale', dir: 'alternate', dur: 180, loop: 1,
-      to: ok ? '1.35 1.35 1' : '0.8 0.8 1', easing: 'easeOutQuad'
+      to: ok ? '1.34 1.34 1' : '0.84 0.84 1', easing: 'easeOutQuad'
     });
-    // tiny OK/NO icon above node
     const icon = document.createElement('a-image');
     icon.setAttribute('src', ok ? '#ok' : '#no');
-    icon.setAttribute('position','0 0.1 0.01');
+    icon.setAttribute('position','0 0.12 0.01');
     icon.setAttribute('scale','0.18 0.18 0.18');
     nodeEl.appendChild(icon);
-    setTimeout(()=> icon.remove(), 400);
+    setTimeout(()=> icon.remove(), 420);
   }
 
   function finishGame(){
     APP.started = false;
     clearInterval(APP.timerHandle);
+    visible('board', false);
+    visible('hud', true);
+    visible('result', true);
 
-    // stars by performance
     let stars = 1;
     if(APP.wrong<=1 && (APP.mode==='practice' || APP.timeLeft>=20)) stars = 3;
     else if(APP.wrong<=3) stars = 2;
 
-    setVisible('board', false);
-    setVisible('hud', true);
-    setVisible('result', true);
-
-    setText('resultTitle', 'เสร็จสิ้น!');
+    setText('resultTitle', 'Completed!');
     const used = (APP.mode==='timed') ? (60 - APP.timeLeft) : '—';
-    setText('resultDetail', `คะแนน: ${APP.score}  |  ผิด: ${APP.wrong} ครั้ง  |  เวลาใช้ไป: ${used}s`);
+    setText('resultDetail', `Score: ${APP.score}  |  Wrong: ${APP.wrong}  |  Time Used: ${used}s`);
     setText('resultStars', '★'.repeat(stars) + '☆'.repeat(3-stars));
   }
 
   function restart(){
     startGame(APP.mode);
   }
-
   function gotoMenu(){
     clearInterval(APP.timerHandle);
     APP.started = false;
-    setVisible('result', false);
-    setVisible('board', false);
-    setVisible('hud', false);
-    setVisible('splash', true);
+    visible('result', false);
+    visible('board', false);
+    visible('hud', false);
+    visible('howto', false);
+    visible('credits', false);
+    visible('splash', true);
   }
-
-  // Keep panel pinned in front of camera
-  function tick(){
-    const cam = document.querySelector('#camera');
-    const ui = document.querySelector('#uiRoot');
-    if(!cam || !ui) return;
-    const camObj = cam.object3D;
-    const uiObj = ui.object3D;
-    // position a bit in front of camera and slightly down for comfortable view
-    const dist = 1.6;
-    const v = new THREE.Vector3(0, -0.05, -dist);
-    camObj.localToWorld(v);
-    uiObj.position.copy(v);
-
-    // face the camera
-    const q = new THREE.Quaternion();
-    camObj.getWorldQuaternion(q);
-    uiObj.quaternion.copy(q);
+  function showPanel(id){
+    visible('splash', false);
+    visible('howto', id==='howto');
+    visible('credits', id==='credits');
   }
+  function backToMenu(){ showPanel('splash'); }
 
+  // Keep UI in front of camera at a comfy height
   AFRAME.registerComponent('follow-camera', {
-    tick: tick
+    schema: { dist: {default: 1.6}, yOffset:{default:-0.05} },
+    tick: function(){
+      const cam = document.querySelector('#camera');
+      const uiObj = this.el.object3D;
+      if(!cam) return;
+      const camObj = cam.object3D;
+      const v = new THREE.Vector3(0, this.data.yOffset, -this.data.dist);
+      camObj.localToWorld(v);
+      uiObj.position.copy(v);
+      const q = new THREE.Quaternion();
+      camObj.getWorldQuaternion(q);
+      uiObj.quaternion.copy(q);
+    }
   });
 
-  // Attach follow-camera to uiRoot
+  function playSfx(name){
+    const el = SFX[name];
+    if(el){ try { el.components && el.components.sound ? el.components.sound.playSound() : el.play(); } catch(e){} }
+  }
+
   document.addEventListener('DOMContentLoaded', ()=>{
-    const ui = document.querySelector('#uiRoot');
-    ui.setAttribute('follow-camera','');
+    // Bind audio
+    SFX.ding = document.querySelector('#ding');
+    SFX.buzz = document.querySelector('#buzz');
+    SFX.click = document.querySelector('#click');
   });
 })();
