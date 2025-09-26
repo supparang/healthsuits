@@ -13,7 +13,17 @@
   </style>
 </head>
 <body>
-  <a-scene renderer="antialias:true; colorManagement:true" background="color: #101218" vr-mode-ui="enabled: true">
+  <a-scene
+    <a-assets>
+      <img id="hand1" src="assets/hand_1_palm.png">
+      <img id="hand2" src="assets/hand_2_back.png">
+      <img id="hand3" src="assets/hand_3_between.png">
+      <img id="hand4" src="assets/hand_4_knuckles.png">
+      <img id="hand5" src="assets/hand_5_thumb.png">
+      <img id="hand6" src="assets/hand_6_tips.png">
+      <img id="hand7" src="assets/hand_7_wrist.png">
+    </a-assets>
+     renderer="antialias:true; colorManagement:true" background="color: #101218" vr-mode-ui="enabled: true">
     <!-- Camera rig with cursor (gaze & tap) -->
     <a-entity id="rig">
       <a-entity id="camera" camera position="0 1.6 0" look-controls>
