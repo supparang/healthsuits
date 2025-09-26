@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>VR เกมล้างมือ ป.5 (พร้อมเสียง/ไอคอน)</title>
+  <title>VR เกมล้างมือ ป.5 (เสียงนับถอยหลัง + การ์ตูนมือ)</title>
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <style>
     html, body { margin:0; padding:0; height:100%; background:#000; }
@@ -13,17 +13,23 @@
 <body>
   <a-scene renderer="antialias:true" background="color: #0b1020">
     <a-assets>
-      <!-- Audio -->
+      <!-- Countdown & SFX -->
+      <audio id="sfx-b3" src="assets/beep3.wav" preload="auto"></audio>
+      <audio id="sfx-b2" src="assets/beep2.wav" preload="auto"></audio>
+      <audio id="sfx-b1" src="assets/beep1.wav" preload="auto"></audio>
+      <audio id="sfx-bgo" src="assets/beepgo.wav" preload="auto"></audio>
+      <audio id="sfx-warn" src="assets/beep_warn.wav" preload="auto"></audio>
       <audio id="sfx-correct" src="assets/correct.wav" preload="auto"></audio>
-      <audio id="sfx-wrong"   src="assets/wrong.wav"   preload="auto"></audio>
-      <!-- Icons -->
-      <img id="icon-palm"    src="assets/palm.svg">
-      <img id="icon-back"    src="assets/back.svg">
-      <img id="icon-between" src="assets/between.svg">
-      <img id="icon-knuckle" src="assets/knuckle.svg">
-      <img id="icon-tips"    src="assets/tips.svg">
-      <img id="icon-thumb"   src="assets/thumb.svg">
-      <img id="icon-wrist"   src="assets/wrist.svg">
+      <audio id="sfx-wrong" src="assets/wrong.wav" preload="auto"></audio>
+
+      <!-- Cartoon guides -->
+      <img id="guide-palm"    src="assets/hand_palm.svg">
+      <img id="guide-back"    src="assets/hand_back.svg">
+      <img id="guide-between" src="assets/hand_between.svg">
+      <img id="guide-knuckle" src="assets/hand_knuckle.svg">
+      <img id="guide-tips"    src="assets/hand_tips.svg">
+      <img id="guide-thumb"   src="assets/hand_thumb.svg">
+      <img id="guide-wrist"   src="assets/hand_wrist.svg">
     </a-assets>
 
     <a-sky color="#0b1020"></a-sky>
