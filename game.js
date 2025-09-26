@@ -1,13 +1,13 @@
-/* Healthy Hero VR (Integrated)
-   Modules: Main Menu + Personal Hygiene (Handwashing 7 Steps) wired in.
-   A-Frame 1.5.0 — English UI for Grade 5 classroom.
+/* Healthy Hero VR (Integrated, Fixed Raycaster)
+   Modules: Main Menu + Personal Hygiene (Handwashing 7 Steps).
+   A-Frame 1.5.0 — English UI.
 */
 (function(){
   const SFX = { ding:null, buzz:null, click:null };
   const APP = {
-    activeModule: null,      // 'hygiene' | 'nutrition' | 'exercise'
-    mode: "practice",        // 'practice' | 'timed'
-    step: 1,                 // 1..7
+    activeModule: null,
+    mode: "practice",
+    step: 1,
     score: 0,
     wrong: 0,
     timeLeft: 60,
@@ -20,7 +20,6 @@
   const show = (id, v)=> $(id).setAttribute('visible', v);
   const setText = (id, v)=> $(id).setAttribute('value', v);
 
-  // Generic button for this app
   AFRAME.registerComponent('hh-button', {
     schema: { label: {type:'string', default:'Button'}, id:{type:'string', default:''} },
     init: function(){
@@ -56,14 +55,10 @@
       case 'how': openHowTo(); break;
       case 'backMain': backToMain(); break;
       case 'backModuleMenu': backToModuleMenu(); break;
-      default:
-        // result screen buttons without explicit id rely on element id
-        const elId = (this && this.id) ? this.id : null;
-        if (elId === 'btnReplay') restartHygiene();
+      default: break;
     }
   }
 
-  // NAVIGATION helpers
   function hideAllPanels(){
     ['mainMenu','hygieneMenu','howto','nutritionPanel','exercisePanel','board','hud','result'].forEach(id=> show(id,false));
   }
@@ -99,7 +94,7 @@
     show('howto', true);
   }
 
-  // HYGIENE (Handwash) game
+  // HYGIENE game
   AFRAME.registerComponent('handwash-nodes', {
     init: function(){
       const el = this.el;
@@ -166,9 +161,7 @@
     }
   }
 
-  function restartHygiene(){
-    startHygiene(APP.mode);
-  }
+  function restartHygiene(){ startHygiene(APP.mode); }
 
   function setHygieneImage(step){
     const img = APP.stepImages[step-1] || APP.stepImages[0];
@@ -249,7 +242,6 @@
     APP.timerHandle = null;
   }
 
-  // UI follow camera (comfortable height)
   AFRAME.registerComponent('follow-camera', {
     schema: { dist: {default: 1.6}, yOffset:{default:-0.05} },
     tick: function(){
