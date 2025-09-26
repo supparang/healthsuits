@@ -1,17 +1,17 @@
-// VR Handwashing for Grade 5 (Thai). Uses A-Frame.
+// Handwashing VR with audio + icons
 (function(){
   const STEPS = [
-    {key:'palm',   label:'1) ฝ่ามือ',        color:'#00e676'},
-    {key:'back',   label:'2) หลังมือ',        color:'#26c6da'},
-    {key:'between',label:'3) ง่ามนิ้ว',      color:'#ffd54f'},
-    {key:'knuckle',label:'4) หลังนิ้ว',      color:'#ff8a65'},
-    {key:'tips',   label:'5) ปลายนิ้ว/เล็บ', color:'#ba68c8'},
-    {key:'thumb',  label:'6) โป้ง',          color:'#90caf9'},
-    {key:'wrist',  label:'7) ข้อมือ',        color:'#f06292'}
+    {key:'palm',   label:'1) ฝ่ามือ',        color:'#00e676', icon:'#icon-palm'},
+    {key:'back',   label:'2) หลังมือ',        color:'#26c6da', icon:'#icon-back'},
+    {key:'between',label:'3) ง่ามนิ้ว',      color:'#ffd54f', icon:'#icon-between'},
+    {key:'knuckle',label:'4) หลังนิ้ว',      color:'#ff8a65', icon:'#icon-knuckle'},
+    {key:'tips',   label:'5) ปลายนิ้ว/เล็บ', color:'#ba68c8', icon:'#icon-tips'},
+    {key:'thumb',  label:'6) โป้ง',          color:'#90caf9', icon:'#icon-thumb'},
+    {key:'wrist',  label:'7) ข้อมือ',        color:'#f06292', icon:'#icon-wrist'}
   ];
 
   const App = {
-    state: 'menu', // 'menu' | 'tutorial' | 'game' | 'end'
+    state: 'menu',
     difficulty: 'normal',
     timeLeft: 45,
     score: 0,
@@ -32,7 +32,15 @@
       btnHard: document.querySelector('#btnHard'),
       diffLabel: document.querySelector('#difficultyLabel'),
     },
+    sfx: {
+      correct: null,
+      wrong: null
+    },
     init(){
+      // Prepare audio (unlocked by first user gesture)
+      this.sfx.correct = document.querySelector('#sfx-correct');
+      this.sfx.wrong   = document.querySelector('#sfx-wrong');
+
       // Bind menu
       this.menu.btnStart.addEventListener('click', ()=> this.startGame());
       this.menu.btnTutorial.addEventListener('click', ()=> this.startTutorial());
@@ -42,6 +50,8 @@
       this.updateHud('เลือกโหมดเพื่อเริ่ม');
       this.updateScore();
     },
+    playCorrect(){ if (this.sfx.correct) { try{ this.sfx.correct.currentTime = 0; this.sfx.correct.play(); }catch(e){} } },
+    playWrong(){ if (this.sfx.wrong) { try{ this.sfx.wrong.currentTime = 0; this.sfx.wrong.play(); }catch(e){} } },
     setDifficulty(level){
       this.difficulty = level;
       const label = level==='easy' ? 'ง่าย' : level==='hard' ? 'ยาก' : 'กลาง';
@@ -66,7 +76,6 @@
       this.menu.root.setAttribute('visible', false);
       this.resetCommon();
       this.updateHud('จับเวลาเริ่ม! แตะเป้าตามลำดับ 1–7 ให้ถูกต้อง');
-      // Start timer
       this.timerId = setInterval(()=>{
         this.timeLeft -= 1;
         this.updateScore();
@@ -92,10 +101,8 @@
     clearWorld(){
       while(this.world.firstChild) this.world.removeChild(this.world.firstChild);
     },
-    // Spawn one target for the current step, with Thai label and helper ring.
     spawnStep(step, tutorial){
       this.clearWorld();
-      // Place targets around front hemisphere with fixed slots for consistency by key
       const pos = this.positionFor(step.key);
       const cont = document.createElement('a-entity');
       cont.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
@@ -106,10 +113,16 @@
       target.setAttribute('material', `color:${step.color}; emissive:#222; roughness:0.2; metalness:0.1`);
       target.setAttribute('animation__pulse','property: scale; to: 1.25 1.25 1.25; dir: alternate; loop: true; dur: 600');
 
-      // Label (smaller text)
       const label = document.createElement('a-entity');
       label.setAttribute('position','0 0.22 0.01');
       label.setAttribute('text',`value:${step.label}; width: 1.0; align: center; color: #fff`);
+
+      // Icon panel (plane with SVG)
+      const icon = document.createElement('a-entity');
+      icon.setAttribute('geometry','primitive: plane; width: 0.24; height: 0.24');
+      icon.setAttribute('material',`shader: flat; src: ${step.icon}`);
+      icon.setAttribute('position','-0.34 0.02 0.01');
+      icon.setAttribute('rotation','0 0 0');
 
       // Helper ring
       const ring = document.createElement('a-entity');
@@ -119,14 +132,14 @@
 
       cont.appendChild(target);
       cont.appendChild(label);
+      cont.appendChild(icon);
       cont.appendChild(ring);
       this.world.appendChild(cont);
 
-      // Click logic
       target.addEventListener('click', ()=>{
-        // Correct step
         this.score += 10;
         this.updateScore();
+        this.playCorrect();
         target.setAttribute('material','color:#ffd54f; emissive:#8d6e63');
         target.setAttribute('animation__hit','property: scale; to: 0.05 0.05 0.05; dur: 120; easing: easeInCubic');
         setTimeout(()=>{
@@ -140,10 +153,8 @@
       });
 
       if (!tutorial){
-        // Spawn 2 distractors (wrong steps) to increase difficulty
         const wrongs = this.pickDistractors(step.key, 2);
         wrongs.forEach(k=> this.spawnDistractor(k));
-        // Reduce lifetime at higher difficulty by auto-moving the target
         if (this.difficulty!=='easy'){
           const mover = document.createElement('a-animation');
           mover.setAttribute('attribute','position');
@@ -171,12 +182,12 @@
       wrong.appendChild(label);
 
       wrong.addEventListener('click', ()=>{
-        // Penalty for wrong hit
         this.score = Math.max(0, this.score - 5);
         if (this.state==='game'){
           this.timeLeft = Math.max(0, this.timeLeft - 3);
         }
         this.updateScore();
+        this.playWrong();
         wrong.setAttribute('material','color:#ef5350; emissive:#7f0000');
         wrong.setAttribute('animation__hit','property: scale; to: 0.03 0.03 0.03; dur: 100; easing: easeInCubic');
         setTimeout(()=> wrong.remove(), 120);
@@ -190,7 +201,6 @@
     },
     pickDistractors(correctKey, count){
       const keys = STEPS.map(s=>s.key).filter(k=>k!==correctKey);
-      // Simple shuffle
       for (let i = keys.length -1; i>0; i--){
         const j = Math.floor(Math.random()*(i+1));
         [keys[i], keys[j]] = [keys[j], keys[i]];
@@ -198,7 +208,6 @@
       return keys.slice(0, count);
     },
     positionFor(key, spread=false){
-      // Pre-defined anchor positions in front hemisphere; slight random spread if requested
       const base = {
         palm:    {x:  0.0, y:1.5, z:-2.0},
         back:    {x: -0.8, y:1.7, z:-2.4},
@@ -220,5 +229,5 @@
   };
 
   document.querySelector('a-scene').addEventListener('loaded', ()=> App.init());
-  window.HANDWASH_APP = App; // expose for debugging in console
+  window.HANDWASH_APP = App;
 })();
