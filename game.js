@@ -242,14 +242,13 @@ function buildHygieneBoard(){
     board.appendChild(ring);
     board.appendChild(label);
     ring.addEventListener('clicked', ()=> hygieneTap(i, ring));
-    // add image for this step
+    // add image for this step under the label
     const img = document.createElement('a-image');
     img.setAttribute('src', '#hand'+(i+1));
-    img.setAttribute('width', '0.20');
-    img.setAttribute('height', '0.20');
-    // place image above the ring slightly to the left/right alternately
-    const ix = p[0] + (i%2===0 ? -0.16 : 0.16);
-    const iy = p[1] + 0.16;
+    img.setAttribute('width', '0.28');
+    img.setAttribute('height', '0.28');
+    const ix = p[0];
+    const iy = p[1] - 0.28;
     img.setAttribute('position', `${ix} ${iy} 0.02`);
     board.appendChild(img);
     
