@@ -1,6 +1,5 @@
-/* Healthy Hero VR (Integrated, Fixed Raycaster)
-   Modules: Main Menu + Personal Hygiene (Handwashing 7 Steps).
-   A-Frame 1.5.0 — English UI.
+/* Healthy Hero VR (Touch+Mouse Fix)
+   Same integrated logic; input handling improved.
 */
 (function(){
   const SFX = { ding:null, buzz:null, click:null };
@@ -33,10 +32,7 @@
       text.setAttribute('position','0 0 0.01');
       el.appendChild(text);
 
-      el.setAttribute('class', (el.getAttribute('class')||'') + ' clickable');
-      el.setAttribute('event-set__enter', 'scale: 1.06 1.06 1');
-      el.setAttribute('event-set__leave', 'scale: 1 1 1');
-
+      el.classList.add('clickable');
       el.addEventListener('click', ()=>{
         playSfx('click');
         const id = this.data.id || el.id;
@@ -94,7 +90,6 @@
     show('howto', true);
   }
 
-  // HYGIENE game
   AFRAME.registerComponent('handwash-nodes', {
     init: function(){
       const el = this.el;
@@ -110,7 +105,7 @@
       for(let i=1;i<=7;i++){
         const n = document.createElement('a-entity');
         n.setAttribute('id', 'node'+i);
-        n.setAttribute('class', 'clickable');
+        n.classList.add('clickable');
         n.setAttribute('geometry','primitive: circle; radius: 0.042');
         n.setAttribute('material','color:#6b7280; opacity:0.95');
         n.setAttribute('position', `${posList[i-1][0]} ${posList[i-1][1]} ${posList[i-1][2]}`);
@@ -161,8 +156,6 @@
     }
   }
 
-  function restartHygiene(){ startHygiene(APP.mode); }
-
   function setHygieneImage(step){
     const img = APP.stepImages[step-1] || APP.stepImages[0];
     $('stepImage').setAttribute('material', 'src', img);
@@ -188,7 +181,7 @@
     if(!APP.started || APP.activeModule!=='hygiene') return;
     if(i===APP.step){
       APP.score += 10;
-      flash(nodeEl, true);
+      pulse(nodeEl, true);
       playSfx('ding');
       APP.step++;
       if(APP.step>7){
@@ -200,7 +193,7 @@
     } else {
       APP.score = Math.max(0, APP.score - 5);
       APP.wrong++;
-      flash(nodeEl, false);
+      pulse(nodeEl, false);
       playSfx('buzz');
     }
     refreshHUD();
@@ -223,7 +216,7 @@
     setText('resultStars', '★'.repeat(stars) + '☆'.repeat(3-stars));
   }
 
-  function flash(nodeEl, ok){
+  function pulse(nodeEl, ok){
     nodeEl.setAttribute('material','color', ok ? '#22c55e' : '#ef4444');
     nodeEl.setAttribute('animation__pulse', {
       property: 'scale', dir: 'alternate', dur: 180, loop: 1,
@@ -267,5 +260,15 @@
     SFX.ding = document.querySelector('#ding');
     SFX.buzz = document.querySelector('#buzz');
     SFX.click = document.querySelector('#click');
+
+    // Ensure cursor reads mouse on desktop
+    const scene = document.querySelector('a-scene');
+    scene.addEventListener('loaded', ()=>{
+      const cursor = document.querySelector('#cursor');
+      if (cursor && cursor.components && cursor.components.cursor) {
+        // Enable mouse-origin when not in immersive VR
+        cursor.setAttribute('cursor', 'rayOrigin: mouse');
+      }
+    });
   });
 })();
