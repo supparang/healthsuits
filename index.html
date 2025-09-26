@@ -25,7 +25,7 @@
     <img id="guide-tips" src="assets/hand_tips.svg">
     <img id="guide-thumb" src="assets/hand_thumb.svg">
     <img id="guide-wrist" src="assets/hand_wrist.svg">
-    <img id="splash-art" src="assets/splash.svg">
+    <img id="splash-art" src="assets/.svg">
   </a-assets>
 
   <a-entity camera look-controls position="0 1.6 0">
@@ -43,15 +43,20 @@
   </a-entity>
 
   <!-- Splash -->
-  <a-entity id="splash" position="0 1.35 -1.6">
-    <a-plane width="1.7" height="1.25" color="#0f172a" opacity="0.92"></a-plane>
-    <a-entity geometry="primitive: plane; width: 1.0; height: 0.5" material="shader: flat; src: #splash-art" position="0 0.22 0.01"></a-entity>
-    <a-entity position="0 -0.02 0.01" text="value: ขั้นตอน: กด 'ไปที่เมนู' → เลือกโหมด; width:1.5; align:center; color:#cbd5e1"></a-entity>
-    <a-entity id="btnEnter" class="clickable" position="0 -0.46 0.02"
-      geometry="primitive: plane; width:0.9; height:0.28" material="color:#22c55e">
-      <a-entity position="0 0 0.01" text="value: ไปที่เมนู; width:1.2; align:center; color:#fff"></a-entity>
-    </a-entity>
+<a-entity id="splash" position="0 1.35 -1.2">
+  <a-plane width="1.9" height="1.2" color="#000" opacity="0.6"></a-plane>
+  <a-entity geometry="primitive: plane; width: 1.0; height: 0.5"
+            material="shader: flat; src: #splash-art"
+            position="0 0.25 0.01"></a-entity>
+  <a-entity position="0 -0.05 0.02"
+            text="value: กด 'ไปที่เมนู' เพื่อเริ่ม; width:2.4; align:center; color:#facc15"></a-entity>
+  <a-entity id="btnEnter" class="clickable" position="0 -0.48 0.02"
+            geometry="primitive: plane; width:0.9; height:0.3" material="color:#22c55e">
+    <a-entity position="0 0 0.01"
+              text="value: ไปที่เมนู; width:1.4; align:center; color:#fff"></a-entity>
   </a-entity>
+</a-entity>
+
 
   <!-- Help overlay (hidden by default) -->
   <a-entity id="howOverlay" visible="false" position="0 1.35 -1.5">
