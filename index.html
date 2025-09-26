@@ -1,20 +1,18 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>มินิเกมอนามัย: ล้างมือ 7 ขั้น (ป.5)</title>
+  <title>Healthy Hero VR — Handwashing 7 Steps (Grade 5)</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
-    body { margin:0; background:#000; }
+    body { margin:0; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     .noselect { user-select:none; -webkit-user-select:none; -ms-user-select:none; }
   </style>
 </head>
 <body class="noselect">
   <a-scene renderer="antialias: true; colorManagement: true" vr-mode-ui="enabled: true">
-    <!-- ASSETS -->
-    <a-assets timeout="10000">
-      <!-- Simple placeholder images for each step (replace with real PNGs later) -->
+    <a-assets timeout="12000">
       <img id="step1" src="assets/step1.png">
       <img id="step2" src="assets/step2.png">
       <img id="step3" src="assets/step3.png">
@@ -25,9 +23,11 @@
       <img id="bg"    src="assets/bg.png">
       <img id="ok"    src="assets/ok.png">
       <img id="no"    src="assets/no.png">
+      <audio id="ding" src="assets/ding.mp3"></audio>
+      <audio id="buzz" src="assets/buzz.mp3"></audio>
+      <audio id="click" src="assets/click.mp3"></audio>
     </a-assets>
 
-    <!-- SKY / BACKGROUND -->
     <a-sky src="#bg" color="#EEF5FF"></a-sky>
 
     <!-- CAMERA + CURSOR -->
@@ -42,58 +42,88 @@
       </a-entity>
     </a-entity>
 
-    <!-- UI PANELS (fixed in front of camera) -->
-    <a-entity id="uiRoot" position="0 0 -2">
-      <!-- Splash -->
+    <!-- UI Root (follows camera) -->
+    <a-entity id="uiRoot" position="0 0 -2" follow-camera>
+      <!-- Splash / Main Menu -->
       <a-entity id="splash" visible="true">
-        <a-plane width="1.4" height="0.9" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="Healthy Hero VR
-มินิเกม: ล้างมือ 7 ขั้น (ป.5)" color="#ffffff" width="1.2" align="center" position="0 0.28 0"></a-text>
-        <a-text value="แตะปุ่มเพื่อเริ่ม • โหมดฝึก = ไม่จับเวลา • โหมดจับเวลา = 60 วินาที" color="#d1fae5" width="1.2" align="center" position="0 0.12 0"></a-text>
+        <a-plane width="1.5" height="1.0" color="#111827" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text value="Healthy Hero VR" color="#ffffff" width="1.3" align="center" position="0 0.36 0"></a-text>
+        <a-text value="Handwashing: 7 Steps (Grade 5)" color="#FDE68A" width="1.3" align="center" position="0 0.27 0"></a-text>
+
+        <a-text value="Choose a mode" color="#A7F3D0" width="1.2" align="center" position="0 0.12 0"></a-text>
 
         <a-entity id="btnPractice" class="clickable"
-                  geometry="primitive: plane; width: 0.55; height: 0.13"
-                  material="color: #10b981; opacity: 0.95" position="-0.35 -0.12 0" handwash-button="label: โหมดฝึก (Practice)">
+                  geometry="primitive: plane; width: 0.58; height: 0.14"
+                  material="color: #10b981; opacity: 0.95" position="-0.4 -0.02 0" handwash-button="label: Practice Mode; id: practice">
         </a-entity>
         <a-entity id="btnTimed" class="clickable"
-                  geometry="primitive: plane; width: 0.55; height: 0.13"
-                  material="color: #3b82f6; opacity: 0.95" position="0.35 -0.12 0" handwash-button="label: โหมดจับเวลา (60s)">
+                  geometry="primitive: plane; width: 0.58; height: 0.14"
+                  material="color: #3b82f6; opacity: 0.95" position="0.4 -0.02 0" handwash-button="label: Timed Mode (60s); id: timed">
         </a-entity>
-        <a-text value="วิธีเล่น: แตะวงสีเขียวตามลำดับขั้นตอนให้ถูกต้อง
-(ผิด = หักคะแนน) • ครบ 7 ขั้น = ชนะ" color="#93c5fd" width="1.2" align="center" position="0 -0.34 0"></a-text>
+
+        <a-entity id="btnHow" class="clickable"
+                  geometry="primitive: plane; width: 0.58; height: 0.14"
+                  material="color: #6b7280; opacity: 0.95" position="-0.4 -0.22 0" handwash-button="label: How to Play; id: how">
+        </a-entity>
+        <a-entity id="btnCredits" class="clickable"
+                  geometry="primitive: plane; width: 0.58; height: 0.14"
+                  material="color: #9CA3AF; opacity: 0.95" position="0.4 -0.22 0" handwash-button="label: Credits; id: credits">
+        </a-entity>
+
+        <a-text value="Gaze or tap to click • Hit the green circle in order 1→7" color="#93c5fd" width="1.3" align="center" position="0 -0.39 0"></a-text>
       </a-entity>
 
-      <!-- HUD top bar -->
-      <a-entity id="hud" position="0 0.36 0" visible="false">
-        <a-plane width="1.6" height="0.12" color="#111827" material="opacity:0.9"></a-plane>
-        <a-text id="hudMode" value="" color="#FDE68A" width="1.6" align="left" position="-0.75 -0.015 0"></a-text>
+      <!-- How To panel -->
+      <a-entity id="howto" visible="false">
+        <a-plane width="1.5" height="1.0" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text value="How to Play" color="#ffffff" width="1.3" align="center" position="0 0.36 0"></a-text>
+        <a-text value="1) Look at a button to select.\n2) Choose Practice or Timed.\n3) Tap the GREEN circle in order (1→7).\n4) Correct = +10, Wrong = -5.\n5) Finish all 7 steps to win!" color="#D1FAE5" width="1.3" align="center" position="0 0.02 0"></a-text>
+        <a-entity id="btnBackHow" class="clickable"
+                  geometry="primitive: plane; width: 0.5; height: 0.14"
+                  material="color: #10b981; opacity: 0.95" position="0 -0.32 0" handwash-button="label: Back">
+        </a-entity>
+      </a-entity>
+
+      <!-- Credits panel -->
+      <a-entity id="credits" visible="false">
+        <a-plane width="1.5" height="1.0" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text value="Credits" color="#ffffff" width="1.3" align="center" position="0 0.36 0"></a-text>
+        <a-text value="Healthy Hero VR — Handwashing (Grade 5)\nBuilt with A-Frame (WebXR).\n© 2025 Classroom Demo. Replace images in /assets for real lesson." color="#D1FAE5" width="1.2" align="center" position="0 0.03 0"></a-text>
+        <a-entity id="btnBackCredits" class="clickable"
+                  geometry="primitive: plane; width: 0.5; height: 0.14"
+                  material="color: #10b981; opacity: 0.95" position="0 -0.32 0" handwash-button="label: Back">
+        </a-entity>
+      </a-entity>
+
+      <!-- HUD -->
+      <a-entity id="hud" position="0 0.37 0" visible="false">
+        <a-plane width="1.7" height="0.12" color="#0B1020" material="opacity:0.9"></a-plane>
+        <a-text id="hudMode" value="" color="#FDE68A" width="1.6" align="left" position="-0.8 -0.015 0"></a-text>
         <a-text id="hudTime" value="" color="#93C5FD" width="1.6" align="center" position="0 -0.015 0"></a-text>
-        <a-text id="hudScore" value="" color="#A7F3D0" width="1.6" align="right" position="0.75 -0.015 0"></a-text>
+        <a-text id="hudScore" value="" color="#A7F3D0" width="1.6" align="right" position="0.8 -0.015 0"></a-text>
       </a-entity>
 
-      <!-- Board: step image + nodes -->
+      <!-- Game Board -->
       <a-entity id="board" visible="false" position="0 0 0.01">
-        <a-plane width="1.6" height="0.9" color="#0b1220" material="opacity:0.9" radius="0.06"></a-plane>
-        <a-plane id="stepImage" width="1.1" height="0.62" position="0 0.06 0" material="src: #step1; opacity:1; transparent:true; color:#ffffff" color="#ffffff"></a-plane>
+        <a-plane width="1.7" height="1.0" color="#0b1220" material="opacity:0.92" radius="0.06"></a-plane>
+        <a-plane id="stepImage" width="1.2" height="0.68" position="0 0.08 0" material="src: #step1; opacity:1; transparent:true;"></a-plane>
 
-        <!-- 7 target nodes (arranged around the image) -->
-        <!-- positions chosen for visibility; images guide the student -->
-        <a-entity id="nodes" handwash-nodes position="0 -0.27 0"></a-entity>
+        <a-entity id="nodes" handwash-nodes position="0 -0.29 0"></a-entity>
       </a-entity>
 
-      <!-- Result panel -->
+      <!-- Result -->
       <a-entity id="result" visible="false">
-        <a-plane width="1.4" height="0.9" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text id="resultTitle" value="ผลลัพธ์" color="#ffffff" width="1.2" align="center" position="0 0.3 0"></a-text>
-        <a-text id="resultDetail" value="" color="#D1FAE5" width="1.2" align="center" position="0 0.08 0"></a-text>
+        <a-plane width="1.5" height="1.0" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text id="resultTitle" value="Result" color="#ffffff" width="1.2" align="center" position="0 0.32 0"></a-text>
+        <a-text id="resultDetail" value="" color="#D1FAE5" width="1.2" align="center" position="0 0.10 0"></a-text>
         <a-text id="resultStars" value="" color="#FDE68A" width="1.2" align="center" position="0 -0.06 0"></a-text>
         <a-entity id="btnReplay" class="clickable"
-                  geometry="primitive: plane; width: 0.55; height: 0.13"
-                  material="color: #10b981; opacity: 0.95" position="-0.35 -0.26 0" handwash-button="label: เล่นอีกครั้ง">
+                  geometry="primitive: plane; width: 0.55; height: 0.14"
+                  material="color: #10b981; opacity: 0.95" position="-0.35 -0.28 0" handwash-button="label: Play Again">
         </a-entity>
         <a-entity id="btnMenu" class="clickable"
-                  geometry="primitive: plane; width: 0.55; height: 0.13"
-                  material="color: #6b7280; opacity: 0.95" position="0.35 -0.26 0" handwash-button="label: กลับเมนู">
+                  geometry="primitive: plane; width: 0.55; height: 0.14"
+                  material="color: #6b7280; opacity: 0.95" position="0.35 -0.28 0" handwash-button="label: Main Menu">
         </a-entity>
       </a-entity>
     </a-entity>
