@@ -1,186 +1,69 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>VR เกมล้างมือ ป.5 — Combined</title>
-  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <style>
-    html, body { margin:0; padding:0; height:100%; background:#000; }
-    .a-canvas, .a-body { position:absolute; width:100%; height:100%; }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Handwash VR Game</title>
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
 </head>
 <body>
-  <a-scene renderer="antialias:true" background="color: #0b1020">
-    <a-assets>
-      <!-- Countdown & SFX -->
-      <audio id="sfx-b3" src="assets/beep3.wav" preload="auto"></audio>
-      <audio id="sfx-b2" src="assets/beep2.wav" preload="auto"></audio>
-      <audio id="sfx-b1" src="assets/beep1.wav" preload="auto"></audio>
-      <audio id="sfx-bgo" src="assets/beepgo.wav" preload="auto"></audio>
-      <audio id="sfx-warn" src="assets/beep_warn.wav" preload="auto"></audio>
-      <audio id="sfx-correct" src="assets/correct.wav" preload="auto"></audio>
-      <audio id="sfx-wrong" src="assets/wrong.wav" preload="auto"></audio>
-      <audio id="ui-click" src="assets/ui_click.wav" preload="auto"></audio>
+<a-scene>
+  <a-assets>
+    <audio id="sfx-b3" src="assets/beep3.wav"></audio>
+    <audio id="sfx-b2" src="assets/beep2.wav"></audio>
+    <audio id="sfx-b1" src="assets/beep1.wav"></audio>
+    <audio id="sfx-bgo" src="assets/beepgo.wav"></audio>
+    <audio id="sfx-warn" src="assets/beep_warn.wav"></audio>
+    <audio id="sfx-correct" src="assets/correct.wav"></audio>
+    <audio id="sfx-wrong" src="assets/wrong.wav"></audio>
+    <audio id="ui-click" src="assets/ui_click.wav"></audio>
 
-      <!-- Cartoon guides -->
-      <img id="guide-palm"    src="assets/hand_palm.svg">
-      <img id="guide-back"    src="assets/hand_back.svg">
-      <img id="guide-between" src="assets/hand_between.svg">
-      <img id="guide-knuckle" src="assets/hand_knuckle.svg">
-      <img id="guide-tips"    src="assets/hand_tips.svg">
-      <img id="guide-thumb"   src="assets/hand_thumb.svg">
-      <img id="guide-wrist"   src="assets/hand_wrist.svg">
+    <img id="guide-palm" src="assets/hand_palm.svg">
+    <img id="guide-back" src="assets/hand_back.svg">
+    <img id="guide-between" src="assets/hand_between.svg">
+    <img id="guide-knuckle" src="assets/hand_knuckle.svg">
+    <img id="guide-tips" src="assets/hand_tips.svg">
+    <img id="guide-thumb" src="assets/hand_thumb.svg">
+    <img id="guide-wrist" src="assets/hand_wrist.svg">
+    <img id="splash-art" src="assets/splash.svg">
+  </a-assets>
 
-      <!-- Splash art -->
-      <img id="splash-art" src="assets/splash.svg">
-    </a-assets>
+  <a-entity camera look-controls position="0 1.6 0">
+    <a-entity cursor="fuse:true; fuseTimeout:800" 
+              geometry="primitive:ring; radiusInner:0.01; radiusOuter:0.015"
+              position="0 0 -1"
+              material="color:#fff; shader:flat"></a-entity>
+  </a-entity>
 
-    <a-sky color="#0b1020"></a-sky>
-    <a-entity light="type: ambient; intensity: 0.8"></a-entity>
-    <a-entity light="type: directional; intensity: 0.6" position="0 1 1"></a-entity>
+  <a-entity id="hud" position="0 2.0 -1.5">
+    <a-entity id="title" text="value: เกมล้างมือ VR; width:1.8; align:center; color:#fff"></a-entity>
+    <a-entity id="status" position="0 -0.2 0" text="value: แตะเพื่อเข้าสู่เมนู; width:1.5; align:center; color:#9cf"></a-entity>
+    <a-entity id="score" position="0 -0.4 0" text="value: คะแนน:0 | ขั้น:0/7 | เวลา:00s; width:1.5; align:center; color:#fff"></a-entity>
+  </a-entity>
 
-    <a-entity id="rig">
-      <a-entity id="camera" camera look-controls position="0 1.6 0">
-        <a-entity id="cursor" cursor="fuse: true; fuseTimeout: 800"
-          raycaster="objects: .clickable"
-          position="0 0 -1"
-          geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.013"
-          material="shader: flat; opacity: 0.95"></a-entity>
-      </a-entity>
+  <a-entity id="splash" position="0 1.4 -1.6">
+    <a-plane width="1.6" height="1.2" color="#222"></a-plane>
+    <a-entity position="0 0.4 0.01" text="value: Handwash VR; width:1.4; align:center; color:#fff"></a-entity>
+    <a-entity id="btnEnter" class="clickable" position="0 -0.3 0.02"
+      geometry="primitive: plane; width:0.8; height:0.3" material="color:#22c55e">
+      <a-entity position="0 0 0.01" text="value: ไปที่เมนู; width:1; align:center; color:#fff"></a-entity>
     </a-entity>
+  </a-entity>
 
-    <!-- HUD -->
-    <a-entity id="hud" position="0 1.6 -1.25">
-      <a-entity id="title" text="value: เกมล้างมือ 7 ขั้นตอน (ป.5); width: 1.5; align: center; color: #fff"></a-entity>
-      <a-entity id="status" position="0 -0.10 0"
-        text="value: แตะเพื่อเข้าสู่หน้าเมนู; width: 1.5; align: center; color: #9cf"></a-entity>
-      <a-entity id="score" position="0 -0.20 0"
-        text="value: คะแนน: 0 | ขั้น: 0/7 | เวลา: 00s; width: 1.5; align: center; color: #fff"></a-entity>
+  <a-entity id="menu" visible="false" position="0 1.2 -2">
+    <a-entity id="btnStart" class="clickable" position="0 0.2 0"
+      geometry="primitive: plane; width:1; height:0.3" material="color:#22c55e">
+      <a-entity position="0 0 0.01" text="value: เริ่มเกม; width:1.2; align:center; color:#fff"></a-entity>
     </a-entity>
-
-    <!-- Splash Screen -->
-    <a-entity id="splash" position="0 1.4 -1.6">
-      <a-entity geometry="primitive: plane; width: 1.6; height: 1.2"
-        material="color: #0f172a; opacity: 0.9"></a-entity>
-
-      <a-entity position="0 0.34 0.01"
-        text="value: เปิดโลกสุขภาพมือสะอาด; width: 1.4; align: center; color: #ffffff"></a-entity>
-
-      <a-entity position="0 0.14 0.01"
-        text="value: เกมล้างมือ 7 ขั้นตอน สำหรับชั้นประถมปีที่ 5; width: 1.4; align: center; color: #cbd5e1"></a-entity>
-
-      <a-entity geometry="primitive: plane; width: 0.9; height: 0.5"
-                material="shader: flat; src: #splash-art" position="0 -0.06 0.01"></a-entity>
-
-      <a-entity id="btnEnter" class="clickable" position="0 -0.46 0.01"
-        geometry="primitive: plane; width: 0.6; height: 0.2"
-        material="color: #22c55e; opacity: 0.95"
-        event-set__enter="_event: mouseenter; material.color: #16a34a"
-        event-set__leave="_event: mouseleave; material.color: #22c55e">
-        <a-entity position="0 0 0.01" text="value: ไปที่เมนู; width: 0.9; align: center; color: #fff"></a-entity>
-      </a-entity>
-
-      <a-entity id="btnHow" class="clickable" position="-0.46 -0.46 0.01"
-        geometry="primitive: plane; width: 0.32; height: 0.2"
-        material="color: #334155; opacity: 0.95"
-        event-set__enter="_event: mouseenter; material.color: #475569"
-        event-set__leave="_event: mouseleave; material.color: #334155">
-        <a-entity position="0 0 0.01" text="value: วิธีเล่น; width: 0.7; align: center; color: #fff"></a-entity>
-      </a-entity>
-
-      <a-entity id="btnAbout" class="clickable" position="0.46 -0.46 0.01"
-        geometry="primitive: plane; width: 0.32; height: 0.2"
-        material="color: #334155; opacity: 0.95"
-        event-set__enter="_event: mouseenter; material.color: #475569"
-        event-set__leave="_event: mouseleave; material.color: #334155">
-        <a-entity position="0 0 0.01" text="value: เกี่ยวกับ; width: 0.7; align: center; color: #fff"></a-entity>
-      </a-entity>
+    <a-entity id="btnTutorial" class="clickable" position="0 -0.2 0"
+      geometry="primitive: plane; width:1; height:0.3" material="color:#0ea5e9">
+      <a-entity position="0 0 0.01" text="value: โหมดฝึก; width:1.2; align:center; color:#fff"></a-entity>
     </a-entity>
+  </a-entity>
 
-    <!-- Overlay: How to Play -->
-    <a-entity id="howOverlay" visible="false" position="0 1.4 -1.5">
-      <a-entity geometry="primitive: plane; width: 1.8; height: 1.1" material="color:#0b132b; opacity:0.96"></a-entity>
-      <a-entity position="0 0.42 0.01" text="value: วิธีเล่น; width: 1.6; align: center; color:#fff"></a-entity>
-      <a-entity position="0 0.18 0.01" text="value: • ใช้การ 'จ้อง' หรือ แตะบนหน้าจอ เพื่อเลือกเป้า; width: 1.6; align: center; color:#cbd5e1"></a-entity>
-      <a-entity position="0 0.04 0.01" text="value: • ทำตามลำดับ 7 ขั้นตอนให้ถูกต้อง; width: 1.6; align: center; color:#cbd5e1"></a-entity>
-      <a-entity position="0 -0.10 0.01" text="value: • โหมดจับเวลา: ระวังเวลาหมด มีเสียงเตือนช่วงท้าย; width: 1.6; align: center; color:#cbd5e1"></a-entity>
-      <a-entity position="0 -0.24 0.01" text="value: • เลือก 'โหมดฝึก' ก่อนเพื่อเรียนรู้ทีละขั้น; width: 1.6; align: center; color:#cbd5e1"></a-entity>
-      <a-entity id="btnCloseHow" class="clickable" position="0 -0.44 0.01"
-        geometry="primitive: plane; width: 0.5; height: 0.2"
-        material="color:#ef4444; opacity:0.95"
-        event-set__enter="_event: mouseenter; material.color: #dc2626"
-        event-set__leave="_event: mouseleave; material.color: #ef4444">
-        <a-entity position="0 0 0.01" text="value: ปิด; width: 0.8; align: center; color:#fff"></a-entity>
-      </a-entity>
-    </a-entity>
+  <a-entity id="world"></a-entity>
 
-    <!-- Overlay: About -->
-    <a-entity id="aboutOverlay" visible="false" position="0 1.4 -1.5">
-      <a-entity geometry="primitive: plane; width: 1.8; height: 0.9" material="color:#0b132b; opacity:0.96"></a-entity>
-      <a-entity position="0 0.26 0.01" text="value: เกี่ยวกับเกม; width: 1.6; align: center; color:#fff"></a-entity>
-      <a-entity position="0 0.02 0.01" text="value: สร้างเพื่อส่งเสริมสุขอนามัย ปลูกฝังนิสัยล้างมือ 7 ขั้นตอน; width: 1.6; align: center; color:#cbd5e1"></a-entity>
-      <a-entity position="0 -0.12 0.01" text="value: เครื่องมือ: A-Frame + WebXR (Android Chrome แนะนำ); width: 1.6; align: center; color:#cbd5e1"></a-entity>
-      <a-entity id="btnCloseAbout" class="clickable" position="0 -0.36 0.01"
-        geometry="primitive: plane; width: 0.5; height: 0.2"
-        material="color:#ef4444; opacity:0.95"
-        event-set__enter="_event: mouseenter; material.color: #dc2626"
-        event-set__leave="_event: mouseleave; material.color: #ef4444">
-        <a-entity position="0 0 0.01" text="value: ปิด; width: 0.8; align: center; color:#fff"></a-entity>
-      </a-entity>
-    </a-entity>
-
-    <!-- Menu (hidden until splash → menu) -->
-    <a-entity id="menu" visible="false" position="0 1.1 -2">
-      <a-entity id="btnStart" class="clickable" geometry="primitive: plane; width: 0.7; height: 0.22"
-        material="color: #2e7d32; opacity: 0.95"
-        event-set__enter="_event: mouseenter; material.color: #43a047"
-        event-set__leave="_event: mouseleave; material.color: #2e7d32"
-        position="0 0 0">
-        <a-entity position="0 0 0.01" text="value: เริ่มเกม (จับเวลา); width: 1.2; align: center; color: #fff"></a-entity>
-      </a-entity>
-
-      <a-entity id="btnTutorial" class="clickable" geometry="primitive: plane; width: 0.7; height: 0.22"
-        material="color: #1565c0; opacity: 0.95"
-        event-set__enter="_event: mouseenter; material.color: #1e88e5"
-        event-set__leave="_event: mouseleave; material.color: #1565c0"
-        position="0 -0.28 0">
-        <a-entity position="0 0 0.01" text="value: โหมดฝึก (ทีละขั้น); width: 1.2; align: center; color: #fff"></a-entity>
-      </a-entity>
-
-      <a-entity id="difficultyLabel" position="0 -0.6 0"
-        text="value: ระดับความยาก: กลาง; width: 1.5; align: center; color: #ffd54f"></a-entity>
-
-      <a-entity id="btnEasy" class="clickable" geometry="primitive: plane; width: 0.32; height: 0.18"
-        material="color: #455a64; opacity: 0.95"
-        event-set__enter="_event: mouseenter; material.color: #607d8b"
-        event-set__leave="_event: mouseleave; material.color: #455a64"
-        position="-0.24 -0.84 0">
-        <a-entity position="0 0 0.01" text="value: ง่าย; width: 0.9; align: center; color: #fff"></a-entity>
-      </a-entity>
-      <a-entity id="btnNormal" class="clickable" geometry="primitive: plane; width: 0.32; height: 0.18"
-        material="color: #455a64; opacity: 0.95"
-        event-set__enter="_event: mouseenter; material.color: #607d8b"
-        event-set__leave="_event: mouseleave; material.color: #455a64"
-        position="0 -0.84 0">
-        <a-entity position="0 0 0.01" text="value: กลาง; width: 0.9; align: center; color: #fff"></a-entity>
-      </a-entity>
-      <a-entity id="btnHard" class="clickable" geometry="primitive: plane; width: 0.32; height: 0.18"
-        material="color: #455a64; opacity: 0.95"
-        event-set__enter="_event: mouseenter; material.color: #607d8b"
-        event-set__leave="_event: mouseleave; material.color: #455a64"
-        position="0.24 -0.84 0">
-        <a-entity position="0 0 0.01" text="value: ยาก; width: 0.9; align: center; color: #fff"></a-entity>
-      </a-entity>
-    </a-entity>
-
-    <!-- Game world -->
-    <a-entity id="world"></a-entity>
-
-    <a-entity geometry="primitive: circle; radius: 6" rotation="-90 0 0"
-              material="color:#151525; metalness:0.2; roughness:0.9; opacity:0.8"></a-entity>
-
-    <script src="game.js"></script>
-  </a-scene>
+  <script src="game.js"></script>
+</a-scene>
 </body>
 </html>
