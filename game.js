@@ -227,7 +227,7 @@ function buildHygieneBoard(){
     ring.addEventListener('clicked', ()=> hygieneTap(i, ring));
     hygieneState.nodes.push(ring);
 
-    // add image under label
+    // ภาพประกอบใต้ป้ายคำอธิบาย
     const img = document.createElement('a-image');
     img.setAttribute('src', '#hand'+(i+1));
     img.setAttribute('width', '0.28');
@@ -374,7 +374,7 @@ function buildExerciseBoard(){
   for (let i=0;i<5;i++){
     const t = document.createElement('a-entity');
     t.setAttribute('geometry','primitive:circle; radius:0.09');
-    t.setAttribute('material','color:#7B1FA2; opacity:0.95');
+    t.setAttribute('material','color','#7B1FA2; opacity:0.95');
     t.setAttribute('position', `${positions[i]} 0 0.01`);
     t.setAttribute('class','clickable');
     t.addEventListener('clicked', ((idx, el)=>()=> exerciseTap(idx, el))(i,t));
@@ -386,4 +386,34 @@ function buildExerciseBoard(){
 
 function exerciseStart(){
   exerciseState.order = [0,1,2,3,4].sort(()=>Math.random()-0.5);
-  exerciseState.i = 
+  exerciseState.i = 0;
+  highlightExerciseTarget();
+}
+
+function highlightExerciseTarget(){
+  exerciseState.targets.forEach((t)=> t.setAttribute('material','color','#7B1FA2'));
+  const idx = exerciseState.order[exerciseState.i];
+  const t = exerciseState.targets[idx];
+  if (t) t.setAttribute('material','color','#2E7D32'); // green next
+}
+
+function exerciseTap(i, el){
+  const expected = exerciseState.order[exerciseState.i];
+  if (i===expected){
+    el.setAttribute('material','color','#1976D2'); // blue correct
+    addScore(2);
+    exerciseState.i++;
+    if (exerciseState.i < exerciseState.order.length){
+      highlightExerciseTarget();
+    } else {
+      endGame();
+    }
+  } else {
+    addMistake(1);
+    el.setAttribute('material','color','#B71C1C');
+    setTimeout(()=>{
+      el.setAttribute('material','color','#7B1FA2');
+      highlightExerciseTarget();
+    }, 500);
+  }
+}
