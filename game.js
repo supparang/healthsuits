@@ -210,6 +210,7 @@ const HYGIENE_STEPS = [
 let hygieneState = { idx:0, nodes:[] };
 
 function buildHygieneBoard(){
+// [IMAGES_INSERTED] add <a-image> beside each ring
   const board = APP.ui.boardHygiene;
   // panel
   const panel = document.createElement('a-entity');
@@ -241,6 +242,17 @@ function buildHygieneBoard(){
     board.appendChild(ring);
     board.appendChild(label);
     ring.addEventListener('clicked', ()=> hygieneTap(i, ring));
+    // add image for this step
+    const img = document.createElement('a-image');
+    img.setAttribute('src', '#hand'+(i+1));
+    img.setAttribute('width', '0.20');
+    img.setAttribute('height', '0.20');
+    // place image above the ring slightly to the left/right alternately
+    const ix = p[0] + (i%2===0 ? -0.16 : 0.16);
+    const iy = p[1] + 0.16;
+    img.setAttribute('position', `${ix} ${iy} 0.02`);
+    board.appendChild(img);
+    
     hygieneState.nodes.push(ring);
   }
 }
