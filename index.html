@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>VR เกมล้างมือ ป.5</title>
+  <title>VR เกมล้างมือ ป.5 (พร้อมเสียง/ไอคอน)</title>
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <style>
     html, body { margin:0; padding:0; height:100%; background:#000; }
@@ -12,11 +12,24 @@
 </head>
 <body>
   <a-scene renderer="antialias:true" background="color: #0b1020">
+    <a-assets>
+      <!-- Audio -->
+      <audio id="sfx-correct" src="assets/correct.wav" preload="auto"></audio>
+      <audio id="sfx-wrong"   src="assets/wrong.wav"   preload="auto"></audio>
+      <!-- Icons -->
+      <img id="icon-palm"    src="assets/palm.svg">
+      <img id="icon-back"    src="assets/back.svg">
+      <img id="icon-between" src="assets/between.svg">
+      <img id="icon-knuckle" src="assets/knuckle.svg">
+      <img id="icon-tips"    src="assets/tips.svg">
+      <img id="icon-thumb"   src="assets/thumb.svg">
+      <img id="icon-wrist"   src="assets/wrist.svg">
+    </a-assets>
+
     <a-sky color="#0b1020"></a-sky>
     <a-entity light="type: ambient; intensity: 0.8"></a-entity>
     <a-entity light="type: directional; intensity: 0.6" position="0 1 1"></a-entity>
 
-    <!-- Camera + cursor for mobile gaze/tap -->
     <a-entity id="rig">
       <a-entity id="camera" camera look-controls position="0 1.6 0">
         <a-entity id="cursor" cursor="fuse: true; fuseTimeout: 800"
@@ -27,7 +40,7 @@
       </a-entity>
     </a-entity>
 
-    <!-- HUD (smaller text for mobile) -->
+    <!-- HUD -->
     <a-entity id="hud" position="0 1.6 -1.25">
       <a-entity id="title" text="value: เกมล้างมือ 7 ขั้นตอน (ป.5); width: 1.5; align: center; color: #fff"></a-entity>
       <a-entity id="status" position="0 -0.10 0"
@@ -80,10 +93,9 @@
       </a-entity>
     </a-entity>
 
-    <!-- Step Targets & Labels -->
+    <!-- World -->
     <a-entity id="world"></a-entity>
 
-    <!-- Ground -->
     <a-entity geometry="primitive: circle; radius: 6" rotation="-90 0 0"
               material="color:#151525; metalness:0.2; roughness:0.9; opacity:0.8"></a-entity>
 
