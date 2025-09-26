@@ -18,6 +18,10 @@
       <img id="arrowDownImg" src="assets/arrow_down.png"/>
       <img id="arrowLeftImg" src="assets/arrow_left.png"/>
       <img id="arrowRightImg" src="assets/arrow_right.png"/>
+      <img id="arrowUpOutlineImg" src="assets/arrow_up_outline.png"/>
+      <img id="arrowDownOutlineImg" src="assets/arrow_down_outline.png"/>
+      <img id="arrowLeftOutlineImg" src="assets/arrow_left_outline.png"/>
+      <img id="arrowRightOutlineImg" src="assets/arrow_right_outline.png"/>
     </a-assets>
 
     <!-- Camera + cursor -->
@@ -96,10 +100,14 @@
       <a-plane id="lane-down" class="lane clickable" width="0.6" height="0.18" color="#13233a" position="0 -0.2 0.03"></a-plane>
 
       <!-- Lane labels -->
-      <a-image src="#arrowUpImg" position="0 0.6 0.01" width="0.16" height="0.16"></a-image>
-      <a-image src="#arrowLeftImg" position="-0.8 0.2 0.01" width="0.16" height="0.16"></a-image>
-      <a-image src="#arrowRightImg" position="0.8 0.2 0.01" width="0.16" height="0.16"></a-image>
-      <a-image src="#arrowDownImg" position="0 -0.2 0.01" width="0.16" height="0.16"></a-image>
+      <a-image src="#arrowUpOutlineImg" position="0 0.6 0.009" width="0.34" height="0.34" material="depthTest:false; transparent:true"></a-image>
+      <a-image src="#arrowUpImg" position="0 0.6 0.01" width="0.28" height="0.28"></a-image>
+      <a-image src="#arrowLeftOutlineImg" position="-0.8 0.2 0.009" width="0.34" height="0.34" material="depthTest:false; transparent:true"></a-image>
+      <a-image src="#arrowLeftImg" position="-0.8 0.2 0.01" width="0.28" height="0.28"></a-image>
+      <a-image src="#arrowRightOutlineImg" position="0.8 0.2 0.009" width="0.34" height="0.34" material="depthTest:false; transparent:true"></a-image>
+      <a-image src="#arrowRightImg" position="0.8 0.2 0.01" width="0.28" height="0.28"></a-image>
+      <a-image src="#arrowDownOutlineImg" position="0 -0.2 0.009" width="0.34" height="0.34" material="depthTest:false; transparent:true"></a-image>
+      <a-image src="#arrowDownImg" position="0 -0.2 0.01" width="0.28" height="0.28"></a-image>
 
       <!-- Spawning root -->
       <a-entity id="spawn-root"></a-entity>
