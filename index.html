@@ -1,112 +1,154 @@
 <!DOCTYPE html>
 <html lang="th">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>WebXR — Hygiene New Start (P.5)</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="./app.js"></script>
-  <style>
-    html, body { margin:0; height:100%; background:#000; }
-    .tip { position:fixed; left:12px; bottom:12px; z-index:10; color:#fff; 
-           font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif;
-           background:rgba(0,0,0,.35); padding:.6rem .8rem; border-radius:.6rem; line-height:1.35; }
-  </style>
-</head>
-<body>
-  <div class="tip">แตะ <strong>Enter VR</strong> เพื่อเข้าแว่น • คลิก/แตะ หรือมองค้าง (gaze) เพื่อตอบสนอง</div>
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+    <title>VR สุขภาพ ป.5 — อนามัย โภชนาการ ออกกำลังกาย (WebXR)</title>
+    <meta name="description" content="WebXR สำหรับ ป.5: อนามัยส่วนบุคคล โภชนาการ และการออกกำลังกาย"/>
+    <!-- A‑Frame -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- Optional Extras -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-event-set-component@5.0.1/dist/aframe-event-set-component.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-layout-component@6.1.2/dist/aframe-layout-component.min.js"></script>
+    <link rel="preconnect" href="https://aframe.io"/>
+    <style>
+      html, body { margin:0; height:100%; background:#111; }
+      .fallback { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; color:white; font-family:system-ui, sans-serif;}
+    </style>
+  </head>
+  <body>
+    <a-scene renderer="colorManagement: true; physicallyCorrectLights: true;"
+             background="color: #1b1f2a"
+             xr-mode-ui="enabled: true"
+             vr-mode-ui="enabled: true"
+             device-orientation-permission-ui="enabled: true">
+      <a-assets timeout="60000">
+        <img id="texRoom" src="./assets/room.jpg"/>
+        <img id="texBtn" src="./assets/btn.png"/>
+        <audio id="sfxClick" src="./assets/click.mp3"></audio>
+        <audio id="sfxSuccess" src="./assets/success.mp3"></audio>
+        <audio id="sfxWrong" src="./assets/wrong.mp3"></audio>
+        <audio id="bgm" src="./assets/bgm.mp3"></audio>
+      </a-assets>
 
-  <a-scene renderer="colorManagement:true; physicallyCorrectLights:true" background="color:#0d131a"
-           cursor="rayOrigin: mouse" xr-mode-ui="enabled:true">
-    <a-assets timeout="15000">
-      <img id="i-logo" src="./assets/logo.png">
-      <img id="i-hands" src="./assets/hands.png">
-    </a-assets>
+      <!-- Sky / Room -->
+      <a-sky src="#texRoom" rotation="0 -90 0"></a-sky>
 
-    <!-- Camera Rig -->
-    <a-entity id="rig" position="0 1.6 0">
-      <a-entity camera look-controls>
-        <a-entity id="gaze"
-          cursor="fuse:true; fuseTimeout:850"
-          raycaster="objects:.clickable.active"
-          position="0 0 -0.5"
-          geometry="primitive:ring; radiusInner:0.004; radiusOuter:0.006"
-          material="color:#fff; shader:flat">
+      <!-- Lighting -->
+      <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+      <a-entity light="type: directional; intensity: 0.8" position="0 3 -1"></a-entity>
+
+      <!-- Camera & Cursor (Gaze + Tappable) -->
+      <a-entity id="rig">
+        <a-entity id="camera" camera look-controls position="0 1.6 0">
+          <a-entity id="cursor"
+                    cursor="fuse: true; fuseTimeout: 900"
+                    geometry="primitive: ring; radiusInner: 0.004; radiusOuter: 0.006"
+                    position="0 0 -1"
+                    material="color: white; shader: flat; opacity: 0.9"
+                    raycaster="objects: .clickable">
+          </a-entity>
+          <!-- HUD -->
+          <a-entity id="hud" position="0 -0.18 -0.8">
+            <a-entity id="hudBox" geometry="primitive: plane; height: 0.11; width: 0.64"
+                      material="color: #000; opacity: 0.5"></a-entity>
+            <a-entity id="hudText" text="value: พร้อมเริ่มเกม; width: 1.8; align: center; color: #fff; wrapCount: 30"
+                      position="0 0 0.01"></a-entity>
+          </a-entity>
         </a-entity>
       </a-entity>
-    </a-entity>
 
-    <!-- Lights -->
-    <a-entity light="type:ambient; intensity:0.6"></a-entity>
-    <a-entity light="type:directional; intensity:0.9" position="0 3 2"></a-entity>
+      <!-- Main Menu -->
+      <a-entity id="uiMain" visible="true" position="0 1.5 -1.8">
+        <a-entity geometry="primitive: plane; width: 1.2; height: 0.78" material="color: #0b3d91; opacity: 0.92;"
+                  position="0 0 0"></a-entity>
+        <a-entity text="value: เกมสุขภาพ ป.5; width: 3.2; align: center; color: #fff;"
+                  position="0 0.28 0.01"></a-entity>
 
-    <!-- Splash -->
-    <a-entity id="ui-splash" position="0 2.2 -1.4" visible="true">
-      <a-plane width="1.6" height="0.9" color="#122038" material="opacity:0.96" radius="0.04"></a-plane>
-      <a-image src="#i-logo" position="-0.55 0.18 0.01" width="0.32" height="0.32"></a-image>
-      <a-entity text="value: Hygiene Quest — Start Fresh; color:#e6f3ff; align:left; width:2.4" position="-0.25 0.28 0.01"></a-entity>
-      <a-entity text="value: เริ่มใหม่จากศูนย์ โฟกัสเกม: อนามัยส่วนบุคคล; color:#cfe9ff; align:left; wrapCount:30; width:2.0" position="-0.25 0.08 0.01"></a-entity>
-      <a-entity id="btn-to-menu" class="clickable active" position="0.5 -0.22 0.01"
-                geometry="primitive:plane; width:0.5; height:0.18" material="color:#2a84ff">
-        <a-entity text="value: ▶ ไปเมนู; align:center; color:#fff; width:2.0"></a-entity>
-      </a-entity>
-    </a-entity>
-
-    <!-- Menu -->
-    <a-entity id="ui-menu" position="0 2.2 -3.0" visible="false">
-      <a-plane width="1.8" height="1.1" color="#122038" material="opacity:0.96" radius="0.04"></a-plane>
-      <a-entity text="value: เลือกโหมดล้างมือ; color:#e6f3ff; align:center; width:2.6" position="0 0.4 0.01"></a-entity>
-      <a-entity id="btn-start-practice" class="clickable" position="-0.45 0.1 0.01"
-                geometry="primitive:plane; width:0.75; height:0.22" material="color:#2a84ff">
-        <a-entity text="value: ▶ โหมดฝึก (ไม่จับเวลา); align:center; color:#fff; width:2.4"></a-entity>
-      </a-entity>
-      <a-entity id="btn-start-game" class="clickable" position="0.45 0.1 0.01"
-                geometry="primitive:plane; width:0.75; height:0.22" material="color:#b35c00">
-        <a-entity text="value: ⏱ เริ่มเกม (จับเวลา 60s); align:center; color:#fff; width:2.6"></a-entity>
-      </a-entity>
-      <a-entity id="btn-exit" class="clickable" position="0 -0.2 0.01"
-                geometry="primitive:plane; width:1.6; height:0.22" material="color:#5a2a2a">
-        <a-entity text="value: ◀ ออกจากเมนู (กลับหน้าหลัก); align:center; color:#fff; width:2.4"></a-entity>
-      </a-entity>
-    </a-entity>
-
-    <!-- Hygiene Game -->
-    <a-entity id="ui-hygiene" position="0 2.2 -1.4" visible="false">
-      <a-plane width="2.8" height="1.6" color="#0f1e2a" material="opacity:0.96" radius="0.03"></a-plane>
-      <!-- HUD -->
-      <a-entity id="hud" position="0 0.68 0.01">
-        <a-plane width="2.6" height="0.18" color="#0e1b27" material="opacity:0.7" radius="0.02"></a-plane>
-        <a-entity id="hud-hint" position="-1.22 0 0.02" text="value: เลือกลำดับล้างมือ 7 ขั้น (ดูวงสีเขียวเป็นขั้นถัดไป); color:#cfe9ff; align:left; wrapCount:48; width:2.4"></a-entity>
-        <a-entity id="hud-score" position="0.82 0 0.02" text="value: คะแนน: 0; color:#e6f3ff; align:right; width:1.8"></a-entity>
-        <a-entity id="hud-timer" position="1.24 0 0.02" text="value: เวลา: --; color:#ffd479; align:right; width:1.6"></a-entity>
-      </a-entity>
-      <!-- Targets grid -->
-      <a-entity id="grid" position="0 -0.05 0.01"></a-entity>
-      <!-- Progress Bar -->
-      <a-entity id="progress" position="0 -0.46 0.02">
-        <a-plane width="2.4" height="0.06" color="#0b2a1a"></a-plane>
-        <a-plane id="progress-fill" width="0.0" height="0.06" color="#1ecf72" position="-1.2 0 0.01"></a-plane>
-      </a-entity>
-      <!-- Controls -->
-      <a-entity id="row-controls" position="0 -0.66 0.01">
-        <a-entity id="btn-menu" class="clickable" position="-0.8 0 0.01" geometry="primitive:plane; width:0.6; height:0.18" material="color:#2a84ff">
-          <a-entity text="value: ◀ เมนู; align:center; color:#fff; width:2.2"></a-entity>
+        <a-entity id="btnStartTimed" class="clickable"
+                  geometry="primitive: plane; width: 1.0; height: 0.16"
+                  material="src: #texBtn; transparent: true;"
+                  position="0 0.09 0.01">
+          <a-entity text="value: เริ่มเกม (จับเวลา); width: 2.8; align: center; color: #111;"
+                    position="0 0 0.01"></a-entity>
         </a-entity>
-        <a-entity id="btn-restart" class="clickable" position="0.8 0 0.01" geometry="primitive:plane; width:0.6; height:0.18" material="color:#1f6b3a">
-          <a-entity text="value: เล่นอีกครั้ง; align:center; color:#fff; width:2.2"></a-entity>
+
+        <a-entity id="btnStartPractice" class="clickable"
+                  geometry="primitive: plane; width: 1.0; height: 0.16"
+                  material="src: #texBtn; transparent: true;"
+                  position="0 -0.09 0.01">
+          <a-entity text="value: โหมดฝึก (ไม่จับเวลา); width: 2.8; align: center; color: #111;"
+                    position="0 0 0.01"></a-entity>
+        </a-entity>
+
+        <a-entity id="btnHow" class="clickable"
+                  geometry="primitive: plane; width: 1.0; height: 0.16"
+                  material="src: #texBtn; transparent: true;"
+                  position="0 -0.27 0.01">
+          <a-entity text="value: วิธีเล่น; width: 2.8; align: center; color: #111;"
+                    position="0 0 0.01"></a-entity>
         </a-entity>
       </a-entity>
-    </a-entity>
 
-    <!-- Result -->
-    <a-entity id="ui-result" position="0 2.2 -1.45" visible="false">
-      <a-plane width="1.8" height="1.2" color="#122038" material="opacity:0.96" radius="0.04"></a-plane>
-      <a-entity id="result-title" position="0 0.45 0.01" text="value: สรุปผล (อนามัยส่วนบุคคล); color:#e6f3ff; align:center; width:2.6"></a-entity>
-      <a-entity id="result-lines" position="0 0.16 0.01" text="value: ...; color:#cfe9ff; align:center; wrapCount:44; width:2.4"></a-entity>
-      <a-entity id="result-advice" position="0 -0.14 0.01" text="value: ...; color:#a9d6ff; align:center; wrapCount:44; width:2.4"></a-entity>
-      <a-entity id="btn-result-retry" class="clickable" position="-0.5 -0.42 0.01" geometry="primitive:plane; width:0.7; height:0.2" material="color:#2a84ff"><a-entity text="value: เล่นอีกครั้ง; align:center; color:#fff; width:2.2"></a-entity></a-entity>
-      <a-entity id="btn-result-menu" class="clickable" position="0.5 -0.42 0.01" geometry="primitive:plane; width:0.7; height:0.2" material="color:#1f6b3a"><a-entity text="value: กลับเมนู; align:center; color:#fff; width:2.2"></a-entity></a-entity>
-    </a-entity>
-  </a-scene>
-</body>
+      <!-- Game Select (once in) -->
+      <a-entity id="uiGameSelect" visible="false" position="0 1.5 -1.8">
+        <a-entity geometry="primitive: plane; width: 1.2; height: 0.86" material="color: #064e3b; opacity: 0.9;"></a-entity>
+        <a-entity text="value: เลือกมินิเกม; width: 3.2; align: center; color: #fff;" position="0 0.34 0.01"></a-entity>
+
+        <a-entity id="btnHygiene" class="clickable" geometry="primitive: plane; width: 1.0; height: 0.16"
+                  material="src: #texBtn; transparent: true;" position="0 0.12 0.01">
+          <a-entity text="value: อนามัยส่วนบุคคล (ล้างมือ 7 ขั้นตอน); width: 2.8; align: center; color:#111"
+                    position="0 0 0.01"></a-entity>
+        </a-entity>
+
+        <a-entity id="btnNutrition" class="clickable" geometry="primitive: plane; width: 1.0; height: 0.16"
+                  material="src: #texBtn; transparent: true;" position="0 -0.08 0.01">
+          <a-entity text="value: โภชนาการ (เลือกอาหารให้เหมาะสม); width: 2.8; align: center; color:#111"
+                    position="0 0 0.01"></a-entity>
+        </a-entity>
+
+        <a-entity id="btnExercise" class="clickable" geometry="primitive: plane; width: 1.0; height: 0.16"
+                  material="src: #texBtn; transparent: true;" position="0 -0.28 0.01">
+          <a-entity text="value: ออกกำลังกาย (ตีเป้าให้ครบ); width: 2.8; align: center; color:#111"
+                    position="0 0 0.01"></a-entity>
+        </a-entity>
+
+        <a-entity id="btnBackToMain" class="clickable" geometry="primitive: plane; width: 1.0; height: 0.12"
+                  material="src: #texBtn; transparent: true;" position="0 -0.44 0.01">
+          <a-entity text="value: กลับหน้าหลัก; width: 2.4; align: center; color:#111"
+                    position="0 0 0.01"></a-entity>
+        </a-entity>
+      </a-entity>
+
+      <!-- How-to Panel -->
+      <a-entity id="uiHow" visible="false" position="0 1.5 -1.8">
+        <a-entity geometry="primitive: plane; width: 1.2; height: 0.9" material="color: #222; opacity: 0.92"></a-entity>
+        <a-entity text="value: วิธีเล่น: มองเป้าหมายให้จุดเล็กตรงกลางล็อกไว้จนเต็มวง (หรือแตะจอ). ใช้โหมดจับเวลาเพื่อเก็บคะแนนดาว.; width: 3.0; color: #fff; align: center; wrapCount: 38"
+                  position="0 0.18 0.01"></a-entity>
+        <a-entity id="btnCloseHow" class="clickable" geometry="primitive: plane; width: 0.9; height: 0.16"
+                  material="src: #texBtn; transparent: true;" position="0 -0.28 0.01">
+          <a-entity text="value: ปิด; width: 2.2; align: center; color:#111" position="0 0 0.01"></a-entity>
+        </a-entity>
+      </a-entity>
+
+      <!-- Game Root -->
+      <a-entity id="gameRoot" visible="false"></a-entity>
+
+      <!-- Summary Panel -->
+      <a-entity id="uiSummary" visible="false" position="0 1.5 -1.8">
+        <a-entity geometry="primitive: plane; width: 1.2; height: 0.9" material="color: #111827; opacity: 0.95"></a-entity>
+        <a-entity id="summaryTitle" text="value: สรุปผล; width: 3.2; align: center; color: #fff;"
+                  position="0 0.33 0.01"></a-entity>
+        <a-entity id="summaryText" text="value: ...; width: 2.8; align: center; color: #e5e7eb; wrapCount: 40"
+                  position="0 0.05 0.01"></a-entity>
+        <a-entity id="btnSummaryBack" class="clickable" geometry="primitive: plane; width: 1.0; height: 0.16"
+                  material="src: #texBtn; transparent: true;" position="0 -0.28 0.01">
+          <a-entity text="value: กลับเลือกเกม; width: 2.8; align: center; color:#111" position="0 0 0.01"></a-entity>
+        </a-entity>
+      </a-entity>
+
+      <script src="./js/game.js"></script>
+    </a-scene>
+    <div class="fallback" id="fallback" style="display:none;">กำลังโหลด...</div>
+  </body>
 </html>
