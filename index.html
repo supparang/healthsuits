@@ -27,7 +27,7 @@
     <!-- Camera Rig -->
     <a-entity id="rig" position="0 1.6 0">
       <a-entity camera look-controls>
-        <a-entity id="gaze" cursor="fuse:true; fuseTimeout:900" raycaster="objects:.clickable"
+        <a-entity id="gaze" cursor="fuse:true; fuseTimeout:900" raycaster="objects:.clickable.active"
                   position="0 0 -0.5" geometry="primitive:ring; radiusInner:0.004; radiusOuter:0.006"
                   material="color:#fff; shader:flat"></a-entity>
       </a-entity>
@@ -50,7 +50,7 @@
     </a-entity>
 
     <!-- Main Menu -->
-    <a-entity id="ui-menu" position="0 2.4 -1.45" visible="false">
+    <a-entity id="ui-menu" position="0 2.4 -3.0" visible="false">
       <a-plane width="1.8" height="1.1" color="#102033" material="opacity:0.95" radius="0.04"></a-plane>
       <a-entity text="value: เลือกหมวดเกม; color:#e6f3ff; align:center; width:2.6" position="0 0.4 0.01"></a-entity>
       <a-entity id="btn-hygiene" class="clickable" position="-0.5 0.1 0.01"
@@ -71,7 +71,7 @@
     </a-entity>
 
     <!-- Hygiene Game Panel (fresh minimal) -->
-    <a-entity id="ui-hygiene" position="0 2.4 -1.6" visible="false">
+    <a-entity id="ui-hygiene" position="0 2.4 -1.4" visible="false">
       <a-plane width="2.8" height="1.6" color="#0f1e2a" material="opacity:0.95" radius="0.03"></a-plane>
       <!-- HUD -->
       <a-entity id="hud" position="0 0.68 0.01">
