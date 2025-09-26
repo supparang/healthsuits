@@ -1,13 +1,13 @@
-// Handwashing VR with audio + icons
+// Handwashing VR: countdown sounds + cartoon hand guide
 (function(){
   const STEPS = [
-    {key:'palm',   label:'1) ฝ่ามือ',        color:'#00e676', icon:'#icon-palm'},
-    {key:'back',   label:'2) หลังมือ',        color:'#26c6da', icon:'#icon-back'},
-    {key:'between',label:'3) ง่ามนิ้ว',      color:'#ffd54f', icon:'#icon-between'},
-    {key:'knuckle',label:'4) หลังนิ้ว',      color:'#ff8a65', icon:'#icon-knuckle'},
-    {key:'tips',   label:'5) ปลายนิ้ว/เล็บ', color:'#ba68c8', icon:'#icon-tips'},
-    {key:'thumb',  label:'6) โป้ง',          color:'#90caf9', icon:'#icon-thumb'},
-    {key:'wrist',  label:'7) ข้อมือ',        color:'#f06292', icon:'#icon-wrist'}
+    {key:'palm',   label:'1) ฝ่ามือ',        color:'#00e676', guide:'#guide-palm'},
+    {key:'back',   label:'2) หลังมือ',        color:'#26c6da', guide:'#guide-back'},
+    {key:'between',label:'3) ง่ามนิ้ว',      color:'#ffd54f', guide:'#guide-between'},
+    {key:'knuckle',label:'4) หลังนิ้ว',      color:'#ff8a65', guide:'#guide-knuckle'},
+    {key:'tips',   label:'5) ปลายนิ้ว/เล็บ', color:'#ba68c8', guide:'#guide-tips'},
+    {key:'thumb',  label:'6) โป้ง',          color:'#90caf9', guide:'#guide-thumb'},
+    {key:'wrist',  label:'7) ข้อมือ',        color:'#f06292', guide:'#guide-wrist'}
   ];
 
   const App = {
@@ -33,16 +33,18 @@
       diffLabel: document.querySelector('#difficultyLabel'),
     },
     sfx: {
-      correct: null,
-      wrong: null
+      b3: document.querySelector('#sfx-b3'),
+      b2: document.querySelector('#sfx-b2'),
+      b1: document.querySelector('#sfx-b1'),
+      bgo: document.querySelector('#sfx-bgo'),
+      warn: document.querySelector('#sfx-warn'),
+      correct: document.querySelector('#sfx-correct'),
+      wrong: document.querySelector('#sfx-wrong')
     },
+    volumes: { main: 0.9 },
     init(){
-      // Prepare audio (unlocked by first user gesture)
-      this.sfx.correct = document.querySelector('#sfx-correct');
-      this.sfx.wrong   = document.querySelector('#sfx-wrong');
-
-      // Bind menu
-      this.menu.btnStart.addEventListener('click', ()=> this.startGame());
+      // menu bindings
+      this.menu.btnStart.addEventListener('click', ()=> this.startCountdownThenGame());
       this.menu.btnTutorial.addEventListener('click', ()=> this.startTutorial());
       this.menu.btnEasy.addEventListener('click', ()=> this.setDifficulty('easy'));
       this.menu.btnNormal.addEventListener('click', ()=> this.setDifficulty('normal'));
@@ -50,8 +52,6 @@
       this.updateHud('เลือกโหมดเพื่อเริ่ม');
       this.updateScore();
     },
-    playCorrect(){ if (this.sfx.correct) { try{ this.sfx.correct.currentTime = 0; this.sfx.correct.play(); }catch(e){} } },
-    playWrong(){ if (this.sfx.wrong) { try{ this.sfx.wrong.currentTime = 0; this.sfx.wrong.play(); }catch(e){} } },
     setDifficulty(level){
       this.difficulty = level;
       const label = level==='easy' ? 'ง่าย' : level==='hard' ? 'ยาก' : 'กลาง';
@@ -71,19 +71,41 @@
       this.updateHud('โหมดฝึก: ทำตามลำดับ 1–7 (ไม่มีจับเวลา)');
       this.spawnStep(STEPS[this.stepIdx], true);
     },
-    startGame(){
-      this.state='game';
+    startCountdownThenGame(){
+      // User clicked (gesture unlocked): play 3-2-1-go, then start game
+      this.state='countdown';
       this.menu.root.setAttribute('visible', false);
       this.resetCommon();
-      this.updateHud('จับเวลาเริ่ม! แตะเป้าตามลำดับ 1–7 ให้ถูกต้อง');
+      let t = 0;
+      const play = (node)=>{ try{ node.currentTime=0; node.volume=this.volumes.main; node.play(); }catch(e){} };
+      const show = (txt)=>{ this.updateHud(txt); };
+
+      show('เตรียมพร้อม...');
+      setTimeout(()=>{ show('3'); play(this.sfx.b3); }, t+=300);
+      setTimeout(()=>{ show('2'); play(this.sfx.b2); }, t+=1000);
+      setTimeout(()=>{ show('1'); play(this.sfx.b1); }, t+=1000);
+      setTimeout(()=>{
+        show('เริ่ม! แตะเป้าตามลำดับ 1–7');
+        play(this.sfx.bgo);
+        this.startGameAfterCountdown();
+      }, t+=1000);
+    },
+    startGameAfterCountdown(){
+      this.state='game';
+      // Start timer & first step
       this.timerId = setInterval(()=>{
         this.timeLeft -= 1;
+        if (this.timeLeft<=5 && this.timeLeft>0){
+          // warning beep in last 5 seconds
+          try{ this.sfx.warn.currentTime=0; this.sfx.warn.play(); }catch(e){}
+        }
         this.updateScore();
         if (this.timeLeft<=0) this.end(false);
       }, 1000);
       this.spawnStep(STEPS[this.stepIdx], false);
     },
     end(isWin){
+      if (this.state==='end') return;
       this.state='end';
       clearInterval(this.timerId);
       this.updateHud(isWin? `ยอดเยี่ยม! คุณผ่านครบ 7 ขั้นตอน ได้ ${this.score} คะแนน` : `หมดเวลา! คะแนน ${this.score}`);
@@ -95,7 +117,7 @@
     },
     updateScore(){
       const stepText = Math.min(this.stepIdx+1, 7);
-      const t = String(this.timeLeft).padStart(2,'0');
+      const t = String(Math.max(0,this.timeLeft)).padStart(2,'0');
       this.hud.score.setAttribute('text','value', `คะแนน: ${this.score} | ขั้น: ${stepText}/7 | เวลา: ${t}s`);
     },
     clearWorld(){
@@ -107,24 +129,27 @@
       const cont = document.createElement('a-entity');
       cont.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
 
+      // target
       const target = document.createElement('a-entity');
       target.classList.add('clickable');
       target.setAttribute('geometry','primitive: sphere; radius: 0.11');
       target.setAttribute('material', `color:${step.color}; emissive:#222; roughness:0.2; metalness:0.1`);
       target.setAttribute('animation__pulse','property: scale; to: 1.25 1.25 1.25; dir: alternate; loop: true; dur: 600');
 
+      // label
       const label = document.createElement('a-entity');
       label.setAttribute('position','0 0.22 0.01');
       label.setAttribute('text',`value:${step.label}; width: 1.0; align: center; color: #fff`);
 
-      // Icon panel (plane with SVG)
-      const icon = document.createElement('a-entity');
-      icon.setAttribute('geometry','primitive: plane; width: 0.24; height: 0.24');
-      icon.setAttribute('material',`shader: flat; src: ${step.icon}`);
-      icon.setAttribute('position','-0.34 0.02 0.01');
-      icon.setAttribute('rotation','0 0 0');
+      // cartoon guide panel
+      const guide = document.createElement('a-entity');
+      guide.setAttribute('geometry','primitive: plane; width: 0.72; height: 0.54');
+      guide.setAttribute('material',`shader: flat; src: ${step.guide}`);
+      guide.setAttribute('position','0.55 0.02 0.0'); // to the right of target
+      guide.setAttribute('rotation','0 -10 0');
+      guide.setAttribute('animation__pop','property: scale; to: 1.05 1.05 1.05; dir: alternate; loop: true; dur: 1200');
 
-      // Helper ring
+      // helper ring
       const ring = document.createElement('a-entity');
       ring.setAttribute('geometry','primitive: torus; radius: 0.16; radiusTubular: 0.008');
       ring.setAttribute('rotation','90 0 0');
@@ -132,14 +157,14 @@
 
       cont.appendChild(target);
       cont.appendChild(label);
-      cont.appendChild(icon);
+      cont.appendChild(guide);
       cont.appendChild(ring);
       this.world.appendChild(cont);
 
       target.addEventListener('click', ()=>{
         this.score += 10;
         this.updateScore();
-        this.playCorrect();
+        try{ this.sfx.correct.currentTime=0; this.sfx.correct.play(); }catch(e){}
         target.setAttribute('material','color:#ffd54f; emissive:#8d6e63');
         target.setAttribute('animation__hit','property: scale; to: 0.05 0.05 0.05; dur: 120; easing: easeInCubic');
         setTimeout(()=>{
@@ -187,7 +212,7 @@
           this.timeLeft = Math.max(0, this.timeLeft - 3);
         }
         this.updateScore();
-        this.playWrong();
+        try{ this.sfx.wrong.currentTime=0; this.sfx.wrong.play(); }catch(e){}
         wrong.setAttribute('material','color:#ef5350; emissive:#7f0000');
         wrong.setAttribute('animation__hit','property: scale; to: 0.03 0.03 0.03; dur: 100; easing: easeInCubic');
         setTimeout(()=> wrong.remove(), 120);
