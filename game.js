@@ -1,5 +1,5 @@
-// Handwashing VR: countdown sounds + cartoon hand guide
 (function(){
+  // ====== Gameplay app (HANDWASH_APP) ======
   const STEPS = [
     {key:'palm',   label:'1) ฝ่ามือ',        color:'#00e676', guide:'#guide-palm'},
     {key:'back',   label:'2) หลังมือ',        color:'#26c6da', guide:'#guide-back'},
@@ -10,53 +10,34 @@
     {key:'wrist',  label:'7) ข้อมือ',        color:'#f06292', guide:'#guide-wrist'}
   ];
 
-  const App = {
-    state: 'menu',
+  const HANDWASH_APP = {
+    state: 'idle',
     difficulty: 'normal',
     timeLeft: 45,
     score: 0,
     stepIdx: 0,
     timerId: null,
-    world: document.querySelector('#world'),
-    hud: {
-      title: document.querySelector('#title'),
-      status: document.querySelector('#status'),
-      score: document.querySelector('#score'),
-    },
-    menu: {
-      root: document.querySelector('#menu'),
-      btnStart: document.querySelector('#btnStart'),
-      btnTutorial: document.querySelector('#btnTutorial'),
-      btnEasy: document.querySelector('#btnEasy'),
-      btnNormal: document.querySelector('#btnNormal'),
-      btnHard: document.querySelector('#btnHard'),
-      diffLabel: document.querySelector('#difficultyLabel'),
-    },
-    sfx: {
-      b3: document.querySelector('#sfx-b3'),
-      b2: document.querySelector('#sfx-b2'),
-      b1: document.querySelector('#sfx-b1'),
-      bgo: document.querySelector('#sfx-bgo'),
-      warn: document.querySelector('#sfx-warn'),
-      correct: document.querySelector('#sfx-correct'),
-      wrong: document.querySelector('#sfx-wrong')
-    },
-    volumes: { main: 0.9 },
+    world: null,
+    hud: null,
+    sfx: null,
     init(){
-      // menu bindings
-      this.menu.btnStart.addEventListener('click', ()=> this.startCountdownThenGame());
-      this.menu.btnTutorial.addEventListener('click', ()=> this.startTutorial());
-      this.menu.btnEasy.addEventListener('click', ()=> this.setDifficulty('easy'));
-      this.menu.btnNormal.addEventListener('click', ()=> this.setDifficulty('normal'));
-      this.menu.btnHard.addEventListener('click', ()=> this.setDifficulty('hard'));
-      this.updateHud('เลือกโหมดเพื่อเริ่ม');
+      this.world = document.querySelector('#world');
+      this.hud = {
+        status: document.querySelector('#status'),
+        score: document.querySelector('#score')
+      };
+      this.sfx = {
+        b3: document.querySelector('#sfx-b3'),
+        b2: document.querySelector('#sfx-b2'),
+        b1: document.querySelector('#sfx-b1'),
+        bgo: document.querySelector('#sfx-bgo'),
+        warn: document.querySelector('#sfx-warn'),
+        correct: document.querySelector('#sfx-correct'),
+        wrong: document.querySelector('#sfx-wrong')
+      };
       this.updateScore();
     },
-    setDifficulty(level){
-      this.difficulty = level;
-      const label = level==='easy' ? 'ง่าย' : level==='hard' ? 'ยาก' : 'กลาง';
-      this.menu.diffLabel.setAttribute('text','value',`ระดับความยาก: ${label}`);
-    },
+    setDifficulty(level){ this.difficulty = level; },
     resetCommon(){
       this.clearWorld();
       this.score = 0;
@@ -66,20 +47,16 @@
     },
     startTutorial(){
       this.state='tutorial';
-      this.menu.root.setAttribute('visible', false);
       this.resetCommon();
       this.updateHud('โหมดฝึก: ทำตามลำดับ 1–7 (ไม่มีจับเวลา)');
       this.spawnStep(STEPS[this.stepIdx], true);
     },
     startCountdownThenGame(){
-      // User clicked (gesture unlocked): play 3-2-1-go, then start game
       this.state='countdown';
-      this.menu.root.setAttribute('visible', false);
       this.resetCommon();
-      let t = 0;
-      const play = (node)=>{ try{ node.currentTime=0; node.volume=this.volumes.main; node.play(); }catch(e){} };
+      const play = (node)=>{ try{ node.currentTime=0; node.play(); }catch(e){} };
       const show = (txt)=>{ this.updateHud(txt); };
-
+      let t = 0;
       show('เตรียมพร้อม...');
       setTimeout(()=>{ show('3'); play(this.sfx.b3); }, t+=300);
       setTimeout(()=>{ show('2'); play(this.sfx.b2); }, t+=1000);
@@ -87,16 +64,14 @@
       setTimeout(()=>{
         show('เริ่ม! แตะเป้าตามลำดับ 1–7');
         play(this.sfx.bgo);
-        this.startGameAfterCountdown();
+        this.startGame();
       }, t+=1000);
     },
-    startGameAfterCountdown(){
+    startGame(){
       this.state='game';
-      // Start timer & first step
       this.timerId = setInterval(()=>{
         this.timeLeft -= 1;
         if (this.timeLeft<=5 && this.timeLeft>0){
-          // warning beep in last 5 seconds
           try{ this.sfx.warn.currentTime=0; this.sfx.warn.play(); }catch(e){}
         }
         this.updateScore();
@@ -109,7 +84,6 @@
       this.state='end';
       clearInterval(this.timerId);
       this.updateHud(isWin? `ยอดเยี่ยม! คุณผ่านครบ 7 ขั้นตอน ได้ ${this.score} คะแนน` : `หมดเวลา! คะแนน ${this.score}`);
-      this.menu.root.setAttribute('visible', true);
       this.clearWorld();
     },
     updateHud(msg){
@@ -129,27 +103,23 @@
       const cont = document.createElement('a-entity');
       cont.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
 
-      // target
       const target = document.createElement('a-entity');
       target.classList.add('clickable');
       target.setAttribute('geometry','primitive: sphere; radius: 0.11');
       target.setAttribute('material', `color:${step.color}; emissive:#222; roughness:0.2; metalness:0.1`);
       target.setAttribute('animation__pulse','property: scale; to: 1.25 1.25 1.25; dir: alternate; loop: true; dur: 600');
 
-      // label
       const label = document.createElement('a-entity');
       label.setAttribute('position','0 0.22 0.01');
       label.setAttribute('text',`value:${step.label}; width: 1.0; align: center; color: #fff`);
 
-      // cartoon guide panel
       const guide = document.createElement('a-entity');
       guide.setAttribute('geometry','primitive: plane; width: 0.72; height: 0.54');
       guide.setAttribute('material',`shader: flat; src: ${step.guide}`);
-      guide.setAttribute('position','0.55 0.02 0.0'); // to the right of target
+      guide.setAttribute('position','0.55 0.02 0.0');
       guide.setAttribute('rotation','0 -10 0');
       guide.setAttribute('animation__pop','property: scale; to: 1.05 1.05 1.05; dir: alternate; loop: true; dur: 1200');
 
-      // helper ring
       const ring = document.createElement('a-entity');
       ring.setAttribute('geometry','primitive: torus; radius: 0.16; radiusTubular: 0.008');
       ring.setAttribute('rotation','90 0 0');
@@ -252,7 +222,78 @@
       return base;
     }
   };
+  window.HANDWASH_APP = HANDWASH_APP;
 
-  document.querySelector('a-scene').addEventListener('loaded', ()=> App.init());
-  window.HANDWASH_APP = App;
+  // ====== Splash / Menu controller (wired to HANDWASH_APP) ======
+  const SPLASH_MENU = {
+    nodes: {},
+    init(){
+      this.nodes = {
+        splash: document.querySelector('#splash'),
+        menu: document.querySelector('#menu'),
+        how: document.querySelector('#howOverlay'),
+        about: document.querySelector('#aboutOverlay'),
+        btnEnter: document.querySelector('#btnEnter'),
+        btnHow: document.querySelector('#btnHow'),
+        btnAbout: document.querySelector('#btnAbout'),
+        btnCloseHow: document.querySelector('#btnCloseHow'),
+        btnCloseAbout: document.querySelector('#btnCloseAbout'),
+        btnStart: document.querySelector('#btnStart'),
+        btnTutorial: document.querySelector('#btnTutorial'),
+        btnEasy: document.querySelector('#btnEasy'),
+        btnNormal: document.querySelector('#btnNormal'),
+        btnHard: document.querySelector('#btnHard'),
+        diffLabel: document.querySelector('#difficultyLabel'),
+        status: document.querySelector('#status'),
+        click: document.querySelector('#ui-click')
+      };
+
+      // Bind splash buttons
+      this.nodes.btnEnter.addEventListener('click', ()=> this.goMenu());
+      this.nodes.btnHow.addEventListener('click', ()=> this.toggleOverlay('how', true));
+      this.nodes.btnAbout.addEventListener('click', ()=> this.toggleOverlay('about', true));
+      this.nodes.btnCloseHow.addEventListener('click', ()=> this.toggleOverlay('how', false));
+      this.nodes.btnCloseAbout.addEventListener('click', ()=> this.toggleOverlay('about', false));
+
+      // Difficulty
+      this.nodes.btnEasy.addEventListener('click', ()=> this.setDifficulty('easy'));
+      this.nodes.btnNormal.addEventListener('click', ()=> this.setDifficulty('normal'));
+      this.nodes.btnHard.addEventListener('click', ()=> this.setDifficulty('hard'));
+      this.setDifficulty('normal');
+
+      // Start / Tutorial
+      this.nodes.btnStart.addEventListener('click', ()=> {
+        this.playClick();
+        this.nodes.status.setAttribute('text','value','กำลังเริ่มเกม (จับเวลา)...');
+        HANDWASH_APP.startCountdownThenGame();
+      });
+      this.nodes.btnTutorial.addEventListener('click', ()=> {
+        this.playClick();
+        this.nodes.status.setAttribute('text','value','เข้าสู่โหมดฝึก...');
+        HANDWASH_APP.startTutorial();
+      });
+    },
+    playClick(){ try{ this.nodes.click.currentTime=0; this.nodes.click.play(); }catch(e){} },
+    goMenu(){
+      this.playClick();
+      this.nodes.splash.setAttribute('visible', false);
+      this.nodes.menu.setAttribute('visible', true);
+      this.nodes.status.setAttribute('text','value','อยู่ที่หน้าเมนู');
+    },
+    toggleOverlay(which, on){
+      this.playClick();
+      const map = {how: this.nodes.how, about: this.nodes.about};
+      (map[which]||this.nodes.how).setAttribute('visible', !!on);
+    },
+    setDifficulty(level){
+      HANDWASH_APP.setDifficulty(level);
+      const label = level==='easy' ? 'ง่าย' : level==='hard' ? 'ยาก' : 'กลาง';
+      this.nodes.diffLabel.setAttribute('text','value',`ระดับความยาก: ${label}`);
+    }
+  };
+
+  document.querySelector('a-scene').addEventListener('loaded', ()=> {
+    HANDWASH_APP.init();
+    SPLASH_MENU.init();
+  });
 })();
