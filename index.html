@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Healthy Hero VR — Handwashing 7 Steps (Grade 5)</title>
+  <title>Healthy Hero VR — Grade 5</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     body { margin:0; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
@@ -13,6 +13,7 @@
 <body class="noselect">
   <a-scene renderer="antialias: true; colorManagement: true" vr-mode-ui="enabled: true">
     <a-assets timeout="12000">
+      <!-- Hygiene (Handwash) assets -->
       <img id="step1" src="assets/step1.png">
       <img id="step2" src="assets/step2.png">
       <img id="step3" src="assets/step3.png">
@@ -42,56 +43,97 @@
       </a-entity>
     </a-entity>
 
-    <!-- UI Root (follows camera) -->
+    <!-- UI Root that follows camera -->
     <a-entity id="uiRoot" position="0 0 -2" follow-camera>
-      <!-- Splash / Main Menu -->
-      <a-entity id="splash" visible="true">
-        <a-plane width="1.5" height="1.0" color="#111827" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="Healthy Hero VR" color="#ffffff" width="1.3" align="center" position="0 0.36 0"></a-text>
-        <a-text value="Handwashing: 7 Steps (Grade 5)" color="#FDE68A" width="1.3" align="center" position="0 0.27 0"></a-text>
+      <!-- MAIN MENU -->
+      <a-entity id="mainMenu" visible="true">
+        <a-plane width="1.7" height="1.1" color="#111827" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text value="Healthy Hero VR" color="#ffffff" width="1.4" align="center" position="0 0.40 0"></a-text>
+        <a-text value="Grade 5 — Health Education" color="#FDE68A" width="1.4" align="center" position="0 0.31 0"></a-text>
+        <a-text value="Choose a game" color="#A7F3D0" width="1.2" align="center" position="0 0.18 0"></a-text>
 
-        <a-text value="Choose a mode" color="#A7F3D0" width="1.2" align="center" position="0 0.12 0"></a-text>
+        <!-- Three module cards -->
+        <a-entity id="btnHygiene" class="clickable"
+                  geometry="primitive: plane; width: 0.5; height: 0.2"
+                  material="color: #10b981; opacity: 0.95" position="-0.6 -0.02 0"
+                  hh-button="label: Personal Hygiene; id: goHygiene">
+        </a-entity>
+        <a-entity id="btnNutrition" class="clickable"
+                  geometry="primitive: plane; width: 0.5; height: 0.2"
+                  material="color: #3b82f6; opacity: 0.95" position="0 -0.02 0"
+                  hh-button="label: Nutrition; id: goNutrition">
+        </a-entity>
+        <a-entity id="btnExercise" class="clickable"
+                  geometry="primitive: plane; width: 0.5; height: 0.2"
+                  material="color: #f59e0b; opacity: 0.95" position="0.6 -0.02 0"
+                  hh-button="label: Exercise; id: goExercise">
+        </a-entity>
+
+        <a-text value="Gaze or tap to click • Supports mobile and VR" color="#93c5fd" width="1.4" align="center" position="0 -0.42 0"></a-text>
+      </a-entity>
+
+      <!-- HYGIENE MODULE MENU (Handwash game) -->
+      <a-entity id="hygieneMenu" visible="false">
+        <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text value="Personal Hygiene — Handwashing" color="#ffffff" width="1.5" align="center" position="0 0.38 0"></a-text>
+        <a-text value="7 Steps Game" color="#FDE68A" width="1.3" align="center" position="0 0.30 0"></a-text>
 
         <a-entity id="btnPractice" class="clickable"
                   geometry="primitive: plane; width: 0.58; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="-0.4 -0.02 0" handwash-button="label: Practice Mode; id: practice">
+                  material="color: #10b981; opacity: 0.95" position="-0.4 0.06 0"
+                  hh-button="label: Practice Mode; id: practice">
         </a-entity>
         <a-entity id="btnTimed" class="clickable"
                   geometry="primitive: plane; width: 0.58; height: 0.14"
-                  material="color: #3b82f6; opacity: 0.95" position="0.4 -0.02 0" handwash-button="label: Timed Mode (60s); id: timed">
+                  material="color: #3b82f6; opacity: 0.95" position="0.4 0.06 0"
+                  hh-button="label: Timed Mode (60s); id: timed">
         </a-entity>
 
         <a-entity id="btnHow" class="clickable"
                   geometry="primitive: plane; width: 0.58; height: 0.14"
-                  material="color: #6b7280; opacity: 0.95" position="-0.4 -0.22 0" handwash-button="label: How to Play; id: how">
+                  material="color: #6b7280; opacity: 0.95" position="-0.4 -0.14 0"
+                  hh-button="label: How to Play; id: how">
         </a-entity>
-        <a-entity id="btnCredits" class="clickable"
+        <a-entity id="btnBackMain1" class="clickable"
                   geometry="primitive: plane; width: 0.58; height: 0.14"
-                  material="color: #9CA3AF; opacity: 0.95" position="0.4 -0.22 0" handwash-button="label: Credits; id: credits">
+                  material="color: #9CA3AF; opacity: 0.95" position="0.4 -0.14 0"
+                  hh-button="label: Back to Main Menu; id: backMain">
         </a-entity>
 
-        <a-text value="Gaze or tap to click • Hit the green circle in order 1→7" color="#93c5fd" width="1.3" align="center" position="0 -0.39 0"></a-text>
+        <a-text value="Hit the GREEN circle in order 1→7 • Correct +10 • Wrong -5" color="#93c5fd" width="1.4" align="center" position="0 -0.40 0"></a-text>
       </a-entity>
 
-      <!-- How To panel -->
+      <!-- How To -->
       <a-entity id="howto" visible="false">
-        <a-plane width="1.5" height="1.0" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="How to Play" color="#ffffff" width="1.3" align="center" position="0 0.36 0"></a-text>
-        <a-text value="1) Look at a button to select.\n2) Choose Practice or Timed.\n3) Tap the GREEN circle in order (1→7).\n4) Correct = +10, Wrong = -5.\n5) Finish all 7 steps to win!" color="#D1FAE5" width="1.3" align="center" position="0 0.02 0"></a-text>
+        <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text value="How to Play — Handwashing" color="#ffffff" width="1.5" align="center" position="0 0.38 0"></a-text>
+        <a-text value="1) Choose Practice or Timed.\n2) Look / tap to click.\n3) Tap GREEN circles in order 1→7.\n4) Score: +10 correct, -5 wrong.\n5) Finish all 7 steps to win." color="#D1FAE5" width="1.4" align="center" position="0 0.02 0"></a-text>
         <a-entity id="btnBackHow" class="clickable"
                   geometry="primitive: plane; width: 0.5; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="0 -0.32 0" handwash-button="label: Back">
+                  material="color: #10b981; opacity: 0.95" position="0 -0.34 0"
+                  hh-button="label: Back; id: backModuleMenu">
         </a-entity>
       </a-entity>
 
-      <!-- Credits panel -->
-      <a-entity id="credits" visible="false">
-        <a-plane width="1.5" height="1.0" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="Credits" color="#ffffff" width="1.3" align="center" position="0 0.36 0"></a-text>
-        <a-text value="Healthy Hero VR — Handwashing (Grade 5)\nBuilt with A-Frame (WebXR).\n© 2025 Classroom Demo. Replace images in /assets for real lesson." color="#D1FAE5" width="1.2" align="center" position="0 0.03 0"></a-text>
-        <a-entity id="btnBackCredits" class="clickable"
+      <!-- Nutrition placeholder -->
+      <a-entity id="nutritionPanel" visible="false">
+        <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text value="Nutrition — Coming Soon" color="#ffffff" width="1.5" align="center" position="0 0.2 0"></a-text>
+        <a-entity id="btnBackMain2" class="clickable"
                   geometry="primitive: plane; width: 0.5; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="0 -0.32 0" handwash-button="label: Back">
+                  material="color: #10b981; opacity: 0.95" position="0 -0.2 0"
+                  hh-button="label: Back to Main Menu; id: backMain">
+        </a-entity>
+      </a-entity>
+
+      <!-- Exercise placeholder -->
+      <a-entity id="exercisePanel" visible="false">
+        <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text value="Exercise — Coming Soon" color="#ffffff" width="1.5" align="center" position="0 0.2 0"></a-text>
+        <a-entity id="btnBackMain3" class="clickable"
+                  geometry="primitive: plane; width: 0.5; height: 0.14"
+                  material="color: #10b981; opacity: 0.95" position="0 -0.2 0"
+                  hh-button="label: Back to Main Menu; id: backMain">
         </a-entity>
       </a-entity>
 
@@ -103,27 +145,30 @@
         <a-text id="hudScore" value="" color="#A7F3D0" width="1.6" align="right" position="0.8 -0.015 0"></a-text>
       </a-entity>
 
-      <!-- Game Board -->
+      <!-- Game Board (Hygiene) -->
       <a-entity id="board" visible="false" position="0 0 0.01">
         <a-plane width="1.7" height="1.0" color="#0b1220" material="opacity:0.92" radius="0.06"></a-plane>
         <a-plane id="stepImage" width="1.2" height="0.68" position="0 0.08 0" material="src: #step1; opacity:1; transparent:true;"></a-plane>
-
         <a-entity id="nodes" handwash-nodes position="0 -0.29 0"></a-entity>
       </a-entity>
 
       <!-- Result -->
       <a-entity id="result" visible="false">
-        <a-plane width="1.5" height="1.0" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text id="resultTitle" value="Result" color="#ffffff" width="1.2" align="center" position="0 0.32 0"></a-text>
-        <a-text id="resultDetail" value="" color="#D1FAE5" width="1.2" align="center" position="0 0.10 0"></a-text>
-        <a-text id="resultStars" value="" color="#FDE68A" width="1.2" align="center" position="0 -0.06 0"></a-text>
+        <a-plane width="1.7" height="1.0" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
+        <a-text id="resultTitle" value="Result" color="#ffffff" width="1.4" align="center" position="0 0.32 0"></a-text>
+        <a-text id="resultDetail" value="" color="#D1FAE5" width="1.4" align="center" position="0 0.10 0"></a-text>
+        <a-text id="resultStars" value="" color="#FDE68A" width="1.4" align="center" position="0 -0.06 0"></a-text>
         <a-entity id="btnReplay" class="clickable"
                   geometry="primitive: plane; width: 0.55; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="-0.35 -0.28 0" handwash-button="label: Play Again">
+                  material="color: #10b981; opacity: 0.95" position="-0.47 -0.28 0" hh-button="label: Play Again">
         </a-entity>
-        <a-entity id="btnMenu" class="clickable"
+        <a-entity id="btnBackModule" class="clickable"
                   geometry="primitive: plane; width: 0.55; height: 0.14"
-                  material="color: #6b7280; opacity: 0.95" position="0.35 -0.28 0" handwash-button="label: Main Menu">
+                  material="color: #6b7280; opacity: 0.95" position="0 -0.28 0" hh-button="label: Module Menu; id: backModuleMenu">
+        </a-entity>
+        <a-entity id="btnBackMain4" class="clickable"
+                  geometry="primitive: plane; width: 0.55; height: 0.14"
+                  material="color: #9CA3AF; opacity: 0.95" position="0.47 -0.28 0" hh-button="label: Main Menu; id: backMain">
         </a-entity>
       </a-entity>
     </a-entity>
