@@ -3,63 +3,91 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#000000"/>
-  <title>WebXR VR Starter</title>
-  <!-- A-Frame (1.7.0) -->
+  <title>VR เกมล้างมือ ป.5</title>
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <style>
     html, body { margin:0; padding:0; height:100%; background:#000; }
-    /* Ensure canvas fills screen to avoid misplaced Enter VR button */
-    .a-canvas, .a-body { position: absolute; width: 100%; height: 100%; }
+    .a-canvas, .a-body { position:absolute; width:100%; height:100%; }
   </style>
 </head>
 <body>
-  <a-scene renderer="antialias:true" background="color: #101018">
-    <!-- Sky / lighting -->
-    <a-sky color="#101018"></a-sky>
-    <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+  <a-scene renderer="antialias:true" background="color: #0b1020">
+    <a-sky color="#0b1020"></a-sky>
+    <a-entity light="type: ambient; intensity: 0.8"></a-entity>
     <a-entity light="type: directional; intensity: 0.6" position="0 1 1"></a-entity>
 
-    <!-- Camera with cursor (gaze/tap to click) -->
+    <!-- Camera + cursor for mobile gaze/tap -->
     <a-entity id="rig">
       <a-entity id="camera" camera look-controls position="0 1.6 0">
-        <a-entity cursor="fuse: true; fuseTimeout: 900"
-                  raycaster="objects: .clickable"
-                  position="0 0 -1"
-                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
-                  material="shader: flat; opacity: 0.9">
-        </a-entity>
+        <a-entity id="cursor" cursor="fuse: true; fuseTimeout: 800"
+          raycaster="objects: .clickable"
+          position="0 0 -1"
+          geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.013"
+          material="shader: flat; opacity: 0.95"></a-entity>
       </a-entity>
     </a-entity>
 
-    <!-- HUD -->
-    <a-entity id="hud" position="0 1.6 -1.2">
-      <a-entity id="title" text="value: เกมล่าจุดสุขภาพ (VR); width: 1.8; align: center; color: #fff"></a-entity>
-      <a-entity id="status" position="0 -0.12 0"
-        text="value: แตะปุ่ม 'เริ่มเกม'; width: 1.8; align: center; color: #9cf"></a-entity>
-      <a-entity id="score" position="0 -0.24 0"
-        text="value: คะแนน: 0 | เวลา: 30s; width: 1.8; align: center; color: #fff"></a-entity>
+    <!-- HUD (smaller text for mobile) -->
+    <a-entity id="hud" position="0 1.6 -1.25">
+      <a-entity id="title" text="value: เกมล้างมือ 7 ขั้นตอน (ป.5); width: 1.5; align: center; color: #fff"></a-entity>
+      <a-entity id="status" position="0 -0.10 0"
+        text="value: เลือกโหมดเพื่อเริ่ม; width: 1.5; align: center; color: #9cf"></a-entity>
+      <a-entity id="score" position="0 -0.20 0"
+        text="value: คะแนน: 0 | ขั้น: 1/7 | เวลา: 00s; width: 1.5; align: center; color: #fff"></a-entity>
     </a-entity>
 
-    <!-- Start button -->
-    <a-entity id="startBtn" class="clickable" position="0 1.2 -2"
-              geometry="primitive: plane; width: 0.6; height: 0.22"
-              material="color: #2e7d32; opacity: 0.95"
-              event-set__enter="_event: mouseenter; material.color: #43a047"
-              event-set__leave="_event: mouseleave; material.color: #2e7d32">
-      <a-entity position="0 0 0.01"
-        text="value: เริ่มเกม; width: 1.2; align: center; color: #fff"></a-entity>
+    <!-- Menu -->
+    <a-entity id="menu" position="0 1.1 -2">
+      <a-entity id="btnStart" class="clickable" geometry="primitive: plane; width: 0.7; height: 0.22"
+        material="color: #2e7d32; opacity: 0.95"
+        event-set__enter="_event: mouseenter; material.color: #43a047"
+        event-set__leave="_event: mouseleave; material.color: #2e7d32"
+        position="0 0 0">
+        <a-entity position="0 0 0.01" text="value: เริ่มเกม (จับเวลา); width: 1.2; align: center; color: #fff"></a-entity>
+      </a-entity>
+
+      <a-entity id="btnTutorial" class="clickable" geometry="primitive: plane; width: 0.7; height: 0.22"
+        material="color: #1565c0; opacity: 0.95"
+        event-set__enter="_event: mouseenter; material.color: #1e88e5"
+        event-set__leave="_event: mouseleave; material.color: #1565c0"
+        position="0 -0.28 0">
+        <a-entity position="0 0 0.01" text="value: โหมดฝึก (ทีละขั้น); width: 1.2; align: center; color: #fff"></a-entity>
+      </a-entity>
+
+      <a-entity id="difficultyLabel" position="0 -0.6 0"
+        text="value: ระดับความยาก: กลาง; width: 1.5; align: center; color: #ffd54f"></a-entity>
+
+      <a-entity id="btnEasy" class="clickable" geometry="primitive: plane; width: 0.32; height: 0.18"
+        material="color: #455a64; opacity: 0.95"
+        event-set__enter="_event: mouseenter; material.color: #607d8b"
+        event-set__leave="_event: mouseleave; material.color: #455a64"
+        position="-0.24 -0.84 0">
+        <a-entity position="0 0 0.01" text="value: ง่าย; width: 0.9; align: center; color: #fff"></a-entity>
+      </a-entity>
+      <a-entity id="btnNormal" class="clickable" geometry="primitive: plane; width: 0.32; height: 0.18"
+        material="color: #455a64; opacity: 0.95"
+        event-set__enter="_event: mouseenter; material.color: #607d8b"
+        event-set__leave="_event: mouseleave; material.color: #455a64"
+        position="0 -0.84 0">
+        <a-entity position="0 0 0.01" text="value: กลาง; width: 0.9; align: center; color: #fff"></a-entity>
+      </a-entity>
+      <a-entity id="btnHard" class="clickable" geometry="primitive: plane; width: 0.32; height: 0.18"
+        material="color: #455a64; opacity: 0.95"
+        event-set__enter="_event: mouseenter; material.color: #607d8b"
+        event-set__leave="_event: mouseleave; material.color: #455a64"
+        position="0.24 -0.84 0">
+        <a-entity position="0 0 0.01" text="value: ยาก; width: 0.9; align: center; color: #fff"></a-entity>
+      </a-entity>
     </a-entity>
 
-    <!-- Target container -->
-    <a-entity id="targets"></a-entity>
+    <!-- Step Targets & Labels -->
+    <a-entity id="world"></a-entity>
 
-    <!-- Ground reference -->
+    <!-- Ground -->
     <a-entity geometry="primitive: circle; radius: 6" rotation="-90 0 0"
               material="color:#151525; metalness:0.2; roughness:0.9; opacity:0.8"></a-entity>
 
-    <!-- Game scripts -->
-    <script src="app.js"></script>
+    <script src="game.js"></script>
   </a-scene>
 </body>
 </html>
