@@ -1,4 +1,4 @@
-/* WebXR Health Game for Grade 5
+/* Healthy Hero VR: สุขภาพดี 3 ด้าน
  * Modules: Hygiene (Handwash 7 steps), Nutrition (Sort foods), Exercise (Touch moving targets)
  * Modes: Timed / Practice
  * UI: VR-friendly HUD, adjustable camera height & UI scale
@@ -41,8 +41,6 @@ window.addEventListener('load', () => {
     sumStars: qs('sumStars'),
     sumStats: qs('sumStats'),
     sumTips: qs('sumTips'),
-    btnRetry: qs('btnRetry'),
-    btnHome: qs('btnHome'),
     floatingHUD: qs('floatingHUD'),
     txtTimer: qs('txtTimer'),
     txtScore: qs('txtScore'),
@@ -59,8 +57,6 @@ window.addEventListener('load', () => {
     btnExercise: qs('btnExercise'),
     btnTimed: qs('btnTimed'),
     btnPractice: qs('btnPractice'),
-    btnSettings: qs('btnSettings'),
-    btnHelp: qs('btnHelp'),
   };
 
   // Bind buttons
@@ -69,10 +65,6 @@ window.addEventListener('load', () => {
   bindButton(APP.ui.btnExercise, ()=>selectModule('exercise'));
   bindButton(APP.ui.btnTimed, ()=>startGame('timed'));
   bindButton(APP.ui.btnPractice, ()=>startGame('practice'));
-  bindButton(APP.ui.btnSettings, showSettings);
-  bindButton(APP.ui.btnHelp, showHelp);
-  bindButton(APP.ui.btnRetry, ()=>startGame(APP.mode));
-  bindButton(APP.ui.btnHome, goHome);
 
   // Build boards
   buildHygieneBoard();
@@ -116,7 +108,7 @@ function startGame(mode){
     updateTimer();
   }
   showBoard(APP.currentModule);
-  APP.ui.hud.setAttribute('visible', false); // hide menu during game
+  APP.ui.hud.setAttribute('visible', false); 
   APP.ui.summary.setAttribute('visible', false);
   APP.ui.floatingHUD.setAttribute('visible', true);
   updateScore();
@@ -140,7 +132,7 @@ function endGame(){
   APP.elapsed = Math.floor((Date.now()-APP.startTime)/1000);
   APP.ui.floatingHUD.setAttribute('visible', false);
   APP.ui.summary.setAttribute('visible', true);
-  // Stars based on time & mistakes
+
   let stars = 1;
   if (APP.mistakes<=2 && APP.elapsed <= 60) stars = 3;
   else if (APP.mistakes<=4 && APP.elapsed <= 90) stars = 2;
@@ -153,7 +145,6 @@ function endGame(){
 
 function renderStars(n){
   const group = APP.ui.sumStars;
-  // clear
   while (group.firstChild) group.removeChild(group.firstChild);
   const spacing = 0.25;
   for (let i=0;i<3;i++){
@@ -172,7 +163,7 @@ function tipForModule(mod, mistakes){
 }
 
 function updateHUD(){
-  APP.ui.hudTitle.setAttribute('text','value','VR สุขภาพ ป.5');
+  APP.ui.hudTitle.setAttribute('text','value','Healthy Hero VR: สุขภาพดี 3 ด้าน');
   const sub = APP.currentModule==='hygiene' ? 'อนามัยส่วนบุคคล — ล้างมือ 7 ขั้น' :
               APP.currentModule==='nutrition' ? 'โภชนาการ — คัดแยกอาหาร' :
               'การออกกำลังกาย — แตะเป้าหมาย';
@@ -186,13 +177,8 @@ function updateTimer(){
   APP.ui.txtTimer.setAttribute('text','value', `เวลา: ${mm}:${ss}`);
 }
 
-function addScore(v=1){
-  APP.score += v;
-  updateScore();
-}
-function addMistake(v=1){
-  APP.mistakes += v;
-}
+function addScore(v=1){ APP.score += v; updateScore(); }
+function addMistake(v=1){ APP.mistakes += v; }
 function updateScore(){
   APP.ui.txtScore.setAttribute('text','value', `คะแนน: ${APP.score}`);
 }
@@ -210,9 +196,7 @@ const HYGIENE_STEPS = [
 let hygieneState = { idx:0, nodes:[] };
 
 function buildHygieneBoard(){
-// [IMAGES_INSERTED] add <a-image> beside each ring
   const board = APP.ui.boardHygiene;
-  // panel
   const panel = document.createElement('a-entity');
   panel.setAttribute('geometry','primitive:plane; width:1.8; height:1.1');
   panel.setAttribute('material','color:#0d2020; opacity:0.85');
@@ -223,14 +207,13 @@ function buildHygieneBoard(){
   title.setAttribute('position','0 0.45 0');
   board.appendChild(title);
 
-  // create 7 circles
-  const startX = -0.75, dx=0.25, rowY1=0.18, rowY2=-0.12, rowY3=-0.42;
+  const startX = -0.75, dx=0.25, rowY1=0.18, rowY2=-0.12;
   const positions = [
     [startX+0*dx, rowY1],[startX+1*dx, rowY1],[startX+2*dx, rowY1],[startX+3*dx,rowY1],
     [startX+0*dx, rowY2],[startX+1*dx, rowY2],[startX+2*dx, rowY2]
   ];
   for (let i=0;i<7;i++){
-    const p = positions[i] || [startX+ (i*dx), rowY3];
+    const p = positions[i];
     const ring = document.createElement('a-entity');
     ring.setAttribute('geometry','primitive:circle; radius:0.1');
     ring.setAttribute('material','color:#757575; opacity:0.95');
@@ -242,7 +225,9 @@ function buildHygieneBoard(){
     board.appendChild(ring);
     board.appendChild(label);
     ring.addEventListener('clicked', ()=> hygieneTap(i, ring));
-    // add image for this step under the label
+    hygieneState.nodes.push(ring);
+
+    // add image under label
     const img = document.createElement('a-image');
     img.setAttribute('src', '#hand'+(i+1));
     img.setAttribute('width', '0.28');
@@ -251,36 +236,31 @@ function buildHygieneBoard(){
     const iy = p[1] - 0.28;
     img.setAttribute('position', `${ix} ${iy} 0.02`);
     board.appendChild(img);
-    
-    hygieneState.nodes.push(ring);
   }
 }
 
 function hygieneStart(){
   hygieneState.idx = 0;
   hygieneState.nodes.forEach((n,i)=>{
-    n.setAttribute('material','color', i===0 ? '#2E7D32' : '#757575'); // green next, gray others
+    n.setAttribute('material','color', i===0 ? '#2E7D32' : '#757575');
   });
 }
 
 function hygieneTap(i, ring){
   const expected = hygieneState.idx;
   if (i===expected){
-    // correct
-    ring.setAttribute('material','color','#1976D2'); // blue
+    ring.setAttribute('material','color','#1976D2'); 
     hygieneState.idx++;
     addScore(5);
     if (hygieneState.idx<7){
-      hygieneState.nodes[hygieneState.idx].setAttribute('material','color','#2E7D32'); // next green
+      hygieneState.nodes[hygieneState.idx].setAttribute('material','color','#2E7D32');
     } else {
       endGame();
     }
   } else {
-    // wrong
     addMistake(1);
     ring.setAttribute('material','color','#B71C1C');
     setTimeout(()=>{
-      // revert if not current or complete
       if (i!==hygieneState.idx && hygieneState.idx<7){
         ring.setAttribute('material','color','#757575');
       }
@@ -316,7 +296,6 @@ function buildNutritionBoard(){
   title.setAttribute('position','0 0.45 0');
   board.appendChild(title);
 
-  // bins
   const binGood = document.createElement('a-entity');
   binGood.setAttribute('geometry','primitive:plane; width:0.7; height:0.5');
   binGood.setAttribute('material','color:#1B5E20; opacity:0.9');
@@ -336,19 +315,12 @@ function buildNutritionBoard(){
   board.appendChild(binGood); board.appendChild(labelGood);
   board.appendChild(binLimit); board.appendChild(labelLimit);
 
-  // current item
-  const itemBox = document.createElement('a-entity');
-  itemBox.setAttribute('geometry','primitive:plane; width:1.4; height:0.18');
-  itemBox.setAttribute('material','color:#29434E; opacity:0.9');
-  itemBox.setAttribute('position','0 0.22 0.01');
   const itemLabel = document.createElement('a-entity');
   itemLabel.setAttribute('id','nutritionItem');
   itemLabel.setAttribute('text','value:; align:center; width:1.8; color:#FFFDE7');
-  itemLabel.setAttribute('position','0 0.22 0.02');
+  itemLabel.setAttribute('position','0 0.32 0.02');
+  board.appendChild(itemLabel);
 
-  board.appendChild(itemBox); board.appendChild(itemLabel);
-
-  // clickable overlays for bins
   binGood.setAttribute('class','clickable');
   binLimit.setAttribute('class','clickable');
   binGood.addEventListener('clicked', ()=> nutritionChoose(true));
@@ -359,7 +331,6 @@ function buildNutritionBoard(){
 
 function nutritionStart(){
   nutritionState.items = [...FOODS];
-  // shuffle
   for (let i=nutritionState.items.length-1;i>0;i--){
     const j = Math.floor(Math.random()*(i+1));
     [nutritionState.items[i], nutritionState.items[j]] = [nutritionState.items[j], nutritionState.items[i]];
@@ -371,29 +342,17 @@ function nutritionStart(){
 function updateNutritionItem(){
   const item = nutritionState.items[nutritionState.i];
   const label = qs('nutritionItem');
-  if (!item){
-    endGame(); return;
-  }
+  if (!item){ endGame(); return; }
   label.setAttribute('text','value', `อาหาร: ${item.name} → เลือกช่อง`);
-  // blink bins
-  blink(nutritionState.bins.good); blink(nutritionState.bins.limit);
 }
 
 function nutritionChoose(chosenGood){
   const item = nutritionState.items[nutritionState.i];
   if (!item) return;
   const correct = (item.good === chosenGood);
-  if (correct){
-    addScore(3);
-  } else {
-    addMistake(1);
-  }
+  if (correct){ addScore(3); } else { addMistake(1); }
   nutritionState.i++;
   updateNutritionItem();
-}
-
-function blink(el){
-  el.setAttribute('animation__blink', 'property: material.opacity; from:0.85; to:1; dir:alternate; dur:500; loop:2');
 }
 
 /* ---------- Exercise Module ---------- */
@@ -411,7 +370,6 @@ function buildExerciseBoard(){
   title.setAttribute('position','0 0.45 0');
   board.appendChild(title);
 
-  // Create 5 moving targets
   const positions = [-0.6, -0.3, 0, 0.3, 0.6];
   for (let i=0;i<5;i++){
     const t = document.createElement('a-entity');
@@ -420,7 +378,6 @@ function buildExerciseBoard(){
     t.setAttribute('position', `${positions[i]} 0 0.01`);
     t.setAttribute('class','clickable');
     t.addEventListener('clicked', ((idx, el)=>()=> exerciseTap(idx, el))(i,t));
-    // animate up/down
     t.setAttribute('animation__move', `property: position; dir:alternate; dur:${1200+Math.random()*1200}; loop:true; to: ${positions[i]} -0.25 0.01`);
     board.appendChild(t);
     exerciseState.targets.push(t);
@@ -428,65 +385,5 @@ function buildExerciseBoard(){
 }
 
 function exerciseStart(){
-  // random order of targets
   exerciseState.order = [0,1,2,3,4].sort(()=>Math.random()-0.5);
-  exerciseState.i = 0;
-  highlightExerciseTarget();
-}
-
-function highlightExerciseTarget(){
-  // reset all
-  exerciseState.targets.forEach((t)=> t.setAttribute('material','color','#7B1FA2'));
-  const idx = exerciseState.order[exerciseState.i];
-  const t = exerciseState.targets[idx];
-  if (t) t.setAttribute('material','color','#2E7D32'); // green next
-}
-
-function exerciseTap(i, el){
-  const expected = exerciseState.order[exerciseState.i];
-  if (i===expected){
-    el.setAttribute('material','color','#1976D2'); // blue correct
-    addScore(2);
-    exerciseState.i++;
-    if (exerciseState.i < exerciseState.order.length){
-      highlightExerciseTarget();
-    } else {
-      endGame();
-    }
-  } else {
-    addMistake(1);
-    el.setAttribute('material','color','#B71C1C');
-    setTimeout(()=>{
-      el.setAttribute('material','color','#7B1FA2');
-      highlightExerciseTarget();
-    }, 500);
-  }
-}
-
-/* ---------- Help & Settings ---------- */
-function showHelp(){
-  const msg = [
-    'วิธีเล่น:',
-    '1) เลือกหมวด (อนามัย/โภชนาการ/ออกกำลัง)',
-    '2) เลือกโหมด จับเวลา หรือ ฝึก',
-    '3) แตะปุ่มด้วยการมองค้าง (gaze) หรือแตะจอ',
-    '4) HUD จะแสดงเวลา/คะแนน',
-    '5) จบเกมจะมีสรุปผลและคำแนะนำ'
-  ].join(' | ');
-  APP.ui.hudMsg.setAttribute('text','value', msg);
-}
-
-function showSettings(){
-  // Toggle camera height between 1.4 / 1.6 / 1.8 to quickly fix “จอสูง/ต่ำเกินไป”
-  const heights = [1.4, 1.6, 1.8, 1.9];
-  const cur = APP.settings.cameraY;
-  const i = (heights.indexOf(cur)+1) % heights.length;
-  APP.settings.cameraY = heights[i];
-  APP.ui.camera.setAttribute('position', `0 ${APP.settings.cameraY} 0`);
-  // also move HUD to stay readable
-  const hudY = APP.settings.cameraY + 0.2;
-  APP.ui.hud.setAttribute('position', `0 ${hudY} ${APP.settings.hudZ}`);
-  APP.ui.summary.setAttribute('position', `0 ${hudY} ${APP.settings.hudZ}`);
-  APP.ui.floatingHUD.setAttribute('position', `0 ${hudY+0.4} ${APP.settings.hudZ+0.2}`);
-  APP.ui.hudSub.setAttribute('text','value', `ตั้งความสูงกล้อง: ${APP.settings.cameraY.toFixed(1)} m`);
-}
+  exerciseState.i = 
