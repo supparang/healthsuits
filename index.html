@@ -1,194 +1,114 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Healthy Hero VR — Grade 5 (Touch+Mouse Fix)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1"/>
+  <title>Healthy Hero VR: Dance!</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
-    body { margin:0; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    .noselect { user-select:none; -webkit-user-select:none; -ms-user-select:none; }
+    body{margin:0;background:#000}
+    .btn{position:fixed;right:12px;bottom:12px;padding:8px 12px;color:#111;background:#fff;border-radius:8px;font-family:system-ui,sans-serif}
   </style>
 </head>
-<body class="noselect">
-  <a-scene renderer="antialias: true; colorManagement: true" vr-mode-ui="enabled: true">
-    <a-assets timeout="12000">
-      <img id="step1" src="assets/step1.png">
-      <img id="step2" src="assets/step2.png">
-      <img id="step3" src="assets/step3.png">
-      <img id="step4" src="assets/step4.png">
-      <img id="step5" src="assets/step5.png">
-      <img id="step6" src="assets/step6.png">
-      <img id="step7" src="assets/step7.png">
-      <img id="bg"    src="assets/bg.png">
-      <img id="ok"    src="assets/ok.png">
-      <img id="no"    src="assets/no.png">
-      <audio id="ding" src="assets/ding.mp3"></audio>
-      <audio id="buzz" src="assets/buzz.mp3"></audio>
-      <audio id="click" src="assets/click.mp3"></audio>
+<body>
+  <a-scene renderer="colorManagement: true" background="color: #0c1220">
+    <a-assets>
+      <audio id="bgm" src="assets/song.wav" preload="auto"></audio>
+      <img id="arrowUpImg" src="assets/arrow_up.png"/>
+      <img id="arrowDownImg" src="assets/arrow_down.png"/>
+      <img id="arrowLeftImg" src="assets/arrow_left.png"/>
+      <img id="arrowRightImg" src="assets/arrow_right.png"/>
     </a-assets>
 
-    <a-sky src="#bg" color="#EEF5FF"></a-sky>
+    <!-- Camera + cursor -->
+    <a-entity id="rig" position="0 1.6 3">
+      <a-camera wasd-controls="acceleration: 25">
+        <a-entity cursor="fuse: true; fuseTimeout: 900"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
+                  material="color: white; shader: flat"></a-entity>
+      </a-camera>
+    </a-entity>
 
-    <!-- CAMERA + CURSOR (robust for mouse+touch+VR) -->
-    <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="camera" camera look-controls wasd-controls>
-        <a-cursor id="cursor"
-          fuse="true" fuse-timeout="800"
-          raycaster="objects: .clickable; far: 15; interval: 0"
-          geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
-          material="color: white; shader: flat; opacity: 0.95"
-          position="0 0 -1">
-        </a-cursor>
+    <!-- Lights -->
+    <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+    <a-entity light="type: directional; intensity: 0.5" position="1 3 2"></a-entity>
+
+    <!-- Floor & background -->
+    <a-sky color="#0e1628"></a-sky>
+    <a-entity geometry="primitive: circle; radius: 30" rotation="-90 0 0"
+              material="color: #0a1020; metalness: 0.2; roughness: 0.9"></a-entity>
+
+    <!-- Splash -->
+    <a-entity id="ui-splash" visible="true" position="0 1.6 -1.6">
+      <a-plane width="2.0" height="1.1" color="#162235" material="opacity:0.95"></a-plane>
+      <a-text value="Healthy Hero VR: Dance!" color="#fff" width="1.8" align="center" position="0 0.35 0"></a-text>
+      <a-text value="Tap or gaze to continue" color="#bcd" width="1.6" align="center" position="0 0.08 0"></a-text>
+      <a-plane id="btn-continue" class="clickable" width="1.2" height="0.22" color="#4ade80" position="0 -0.24 0">
+        <a-text value="CONTINUE" align="center" color="#063" width="1.0" position="0 0 0.01"></a-text>
+      </a-plane>
+    </a-entity>
+
+    <!-- Menu -->
+    <a-entity id="ui-menu" visible="false" position="0 1.6 -1.6">
+      <a-plane width="2.2" height="1.3" color="#162235" material="opacity:0.95"></a-plane>
+      <a-text value="Dance Game Menu" color="#fff" width="1.8" align="center" position="0 0.45 0"></a-text>
+
+      <a-plane id="btn-play" class="clickable" width="1.5" height="0.24" color="#60a5fa" position="0 0.14 0">
+        <a-text value="Start Game (Timer)" align="center" color="#062" width="1.2" position="0 0 0.01"></a-text>
+      </a-plane>
+      <a-plane id="btn-practice" class="clickable" width="1.5" height="0.24" color="#86efac" position="0 -0.16 0">
+        <a-text value="Practice Mode (No Timer)" align="center" color="#063" width="1.2" position="0 0 0.01"></a-text>
+      </a-plane>
+      <a-plane id="btn-howto" class="clickable" width="1.5" height="0.24" color="#fde68a" position="0 -0.46 0">
+        <a-text value="How to Play" align="center" color="#6b4005" width="1.2" position="0 0 0.01"></a-text>
+      </a-plane>
+    </a-entity>
+
+    <!-- How-To -->
+    <a-entity id="ui-howto" visible="false" position="0 1.6 -1.6">
+      <a-plane width="2.2" height="1.3" color="#162235" material="opacity:0.95"></a-plane>
+      <a-text value="How to Play" color="#fff" width="1.8" align="center" position="0 0.45 0"></a-text>
+      <a-text value="Music plays. Arrows fly to targets. Look at a target (⬆⬇⬅➡) and tap right on beat: Perfect/Good/Miss → Score and combo!"
+               color="#cfe" width="1.9" position="-1.05 0.15 0"></a-text>
+      <a-plane id="btn-back-menu" class="clickable" width="1.0" height="0.22" color="#93c5fd" position="0 -0.46 0">
+        <a-text value="Back" align="center" color="#063" width="0.8" position="0 0 0.01"></a-text>
+      </a-plane>
+    </a-entity>
+
+    <!-- HUD -->
+    <a-entity id="hud" visible="false">
+      <a-entity id="hud-panel" position="0 2.4 -1.9">
+        <a-plane width="1.8" height="0.3" color="#0b1220" material="opacity:0.8"></a-plane>
+        <a-text id="hud-left" value="Time: 60" color="#bfe" width="1.0" position="-0.8 0 0.01"></a-text>
+        <a-text id="hud-mid" value="Combo: 0" color="#bfe" width="0.6" align="center" position="0 0 0.01"></a-text>
+        <a-text id="hud-right" value="Score: 0" color="#bfe" width="1.0" align="right" position="0.8 0 0.01"></a-text>
       </a-entity>
     </a-entity>
 
-    <!-- UI Root that follows camera -->
-    <a-entity id="uiRoot" position="0 0 -2" follow-camera>
-      <!-- MAIN MENU -->
-      <a-entity id="mainMenu" visible="true">
-        <a-plane width="1.7" height="1.1" color="#111827" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="Healthy Hero VR" color="#ffffff" width="1.4" align="center" position="0 0.40 0"></a-text>
-        <a-text value="Grade 5 — Health Education" color="#FDE68A" width="1.4" align="center" position="0 0.31 0"></a-text>
-        <a-text value="Choose a game" color="#A7F3D0" width="1.2" align="center" position="0 0.18 0"></a-text>
+    <!-- Target Lanes -->
+    <a-entity id="arena" visible="false" position="0 1.6 -2.6">
+      <!-- Hit zones -->
+      <a-plane id="lane-up" class="lane clickable" width="0.6" height="0.18" color="#13233a" position="0 0.6 0"></a-plane>
+      <a-plane id="lane-left" class="lane clickable" width="0.6" height="0.18" color="#13233a" position="-0.8 0.2 0"></a-plane>
+      <a-plane id="lane-right" class="lane clickable" width="0.6" height="0.18" color="#13233a" position="0.8 0.2 0"></a-plane>
+      <a-plane id="lane-down" class="lane clickable" width="0.6" height="0.18" color="#13233a" position="0 -0.2 0"></a-plane>
 
-        <a-entity id="btnHygiene" class="clickable"
-                  geometry="primitive: plane; width: 0.5; height: 0.2"
-                  material="color: #10b981; opacity: 0.95" position="-0.6 -0.02 0"
-                  hh-button="label: Personal Hygiene; id: goHygiene">
-        </a-entity>
-        <a-entity id="btnNutrition" class="clickable"
-                  geometry="primitive: plane; width: 0.5; height: 0.2"
-                  material="color: #3b82f6; opacity: 0.95" position="0 -0.02 0"
-                  hh-button="label: Nutrition; id: goNutrition">
-        </a-entity>
-        <a-entity id="btnExercise" class="clickable"
-                  geometry="primitive: plane; width: 0.5; height: 0.2"
-                  material="color: #f59e0b; opacity: 0.95" position="0.6 -0.02 0"
-                  hh-button="label: Exercise; id: goExercise">
-        </a-entity>
+      <!-- Lane labels -->
+      <a-image src="#arrowUpImg" position="0 0.6 0.01" width="0.16" height="0.16"></a-image>
+      <a-image src="#arrowLeftImg" position="-0.8 0.2 0.01" width="0.16" height="0.16"></a-image>
+      <a-image src="#arrowRightImg" position="0.8 0.2 0.01" width="0.16" height="0.16"></a-image>
+      <a-image src="#arrowDownImg" position="0 -0.2 0.01" width="0.16" height="0.16"></a-image>
 
-        <a-text value="Desktop: use mouse click • Mobile: tap center • VR: gaze until ring fills" color="#93c5fd" width="1.55" align="center" position="0 -0.42 0"></a-text>
-      </a-entity>
-
-      <!-- HYGIENE MENU -->
-      <a-entity id="hygieneMenu" visible="false">
-        <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="Personal Hygiene — Handwashing" color="#ffffff" width="1.5" align="center" position="0 0.38 0"></a-text>
-        <a-text value="7 Steps Game" color="#FDE68A" width="1.3" align="center" position="0 0.30 0"></a-text>
-
-        <a-entity id="btnPractice" class="clickable"
-                  geometry="primitive: plane; width: 0.58; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="-0.4 0.06 0"
-                  hh-button="label: Practice Mode; id: practice">
-        </a-entity>
-        <a-entity id="btnTimed" class="clickable"
-                  geometry="primitive: plane; width: 0.58; height: 0.14"
-                  material="color: #3b82f6; opacity: 0.95" position="0.4 0.06 0"
-                  hh-button="label: Timed Mode (60s); id: timed">
-        </a-entity>
-
-        <a-entity id="btnHow" class="clickable"
-                  geometry="primitive: plane; width: 0.58; height: 0.14"
-                  material="color: #6b7280; opacity: 0.95" position="-0.4 -0.14 0"
-                  hh-button="label: How to Play; id: how">
-        </a-entity>
-        <a-entity id="btnBackMain1" class="clickable"
-                  geometry="primitive: plane; width: 0.58; height: 0.14"
-                  material="color: #9CA3AF; opacity: 0.95" position="0.4 -0.14 0"
-                  hh-button="label: Back to Main Menu; id: backMain">
-        </a-entity>
-
-        <a-text value="Hit the GREEN circle in order 1→7 • Correct +10 • Wrong -5" color="#93c5fd" width="1.4" align="center" position="0 -0.40 0"></a-text>
-      </a-entity>
-
-      <!-- How To -->
-      <a-entity id="howto" visible="false">
-        <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="How to Play — Handwashing" color="#ffffff" width="1.5" align="center" position="0 0.38 0"></a-text>
-        <a-text value="1) Choose Practice or Timed.\n2) Look / tap to click.\n3) Tap GREEN circles in order 1→7.\n4) Score: +10 correct, -5 wrong.\n5) Finish all 7 steps to win." color="#D1FAE5" width="1.4" align="center" position="0 0.02 0"></a-text>
-        <a-entity id="btnBackHow" class="clickable"
-                  geometry="primitive: plane; width: 0.5; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="0 -0.34 0"
-                  hh-button="label: Back; id: backModuleMenu">
-        </a-entity>
-      </a-entity>
-
-      <!-- Nutrition placeholder -->
-      <a-entity id="nutritionPanel" visible="false">
-        <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="Nutrition — Coming Soon" color="#ffffff" width="1.5" align="center" position="0 0.2 0"></a-text>
-        <a-entity id="btnBackMain2" class="clickable"
-                  geometry="primitive: plane; width: 0.5; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="0 -0.2 0"
-                  hh-button="label: Back to Main Menu; id: backMain">
-        </a-entity>
-      </a-entity>
-
-      <!-- Exercise placeholder -->
-      <a-entity id="exercisePanel" visible="false">
-        <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text value="Exercise — Coming Soon" color="#ffffff" width="1.5" align="center" position="0 0.2 0"></a-text>
-        <a-entity id="btnBackMain3" class="clickable"
-                  geometry="primitive: plane; width: 0.5; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="0 -0.2 0"
-                  hh-button="label: Back to Main Menu; id: backMain">
-        </a-entity>
-      </a-entity>
-
-      <!-- HUD -->
-      <a-entity id="hud" position="0 0.37 0" visible="false">
-        <a-plane width="1.7" height="0.12" color="#0B1020" material="opacity:0.9"></a-plane>
-        <a-text id="hudMode" value="" color="#FDE68A" width="1.6" align="left" position="-0.8 -0.015 0"></a-text>
-        <a-text id="hudTime" value="" color="#93C5FD" width="1.6" align="center" position="0 -0.015 0"></a-text>
-        <a-text id="hudScore" value="" color="#A7F3D0" width="1.6" align="right" position="0.8 -0.015 0"></a-text>
-      </a-entity>
-
-      <!-- Game Board (Hygiene) -->
-      <a-entity id="board" visible="false" position="0 0 0.01">
-        <a-plane width="1.7" height="1.0" color="#0b1220" material="opacity:0.92" radius="0.06"></a-plane>
-        <a-plane id="stepImage" width="1.2" height="0.68" position="0 0.08 0" material="src: #step1; opacity:1; transparent:true;"></a-plane>
-        <a-entity id="nodes" handwash-nodes position="0 -0.29 0"></a-entity>
-      </a-entity>
-
-      <!-- Result -->
-      <a-entity id="result" visible="false">
-        <a-plane width="1.7" height="1.0" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
-        <a-text id="resultTitle" value="Result" color="#ffffff" width="1.4" align="center" position="0 0.32 0"></a-text>
-        <a-text id="resultDetail" value="" color="#D1FAE5" width="1.4" align="center" position="0 0.10 0"></a-text>
-        <a-text id="resultStars" value="" color="#FDE68A" width="1.4" align="center" position="0 -0.06 0"></a-text>
-        <a-entity id="btnReplay" class="clickable"
-                  geometry="primitive: plane; width: 0.55; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="-0.47 -0.28 0" hh-button="label: Play Again; id: practice">
-        </a-entity>
-        <a-entity id="btnBackModule" class="clickable"
-                  geometry="primitive: plane; width: 0.55; height: 0.14"
-                  material="color: #6b7280; opacity: 0.95" position="0 -0.28 0" hh-button="label: Module Menu; id: backModuleMenu">
-        </a-entity>
-        <a-entity id="btnBackMain4" class="clickable"
-                  geometry="primitive: plane; width: 0.55; height: 0.14"
-                  material="color: #9CA3AF; opacity: 0.95" position="0.47 -0.28 0" hh-button="label: Main Menu; id: backMain">
-        </a-entity>
-      </a-entity>
+      <!-- Spawning root -->
+      <a-entity id="spawn-root"></a-entity>
     </a-entity>
 
-    <script src="game.js"></script>
+    <a-entity id="click-handler"></a-entity>
   </a-scene>
 
-  <script>
-    // Fallback: convert screen taps/clicks into 'click' on intersected entity if A-Frame misses it
-    (function(){
-      function triggerCursorClick(){
-        var cursor = document.querySelector('#cursor');
-        if (!cursor || !cursor.components || !cursor.components.raycaster) return;
-        var list = cursor.components.raycaster.intersectedEls || [];
-        if (list.length > 0) {
-          list[0].emit('click');
-        }
-      }
-      window.addEventListener('mousedown', triggerCursorClick);
-      window.addEventListener('touchstart', triggerCursorClick, {passive:true});
-    })();
-  </script>
+  <button class="btn" onclick="document.querySelector('a-scene').enterVR()">Enter VR</button>
+
+  <script src="./game.js"></script>
 </body>
 </html>
