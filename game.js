@@ -193,14 +193,26 @@ function spawnNote(note){
   const root = $('#spawn-root');
   const imgId = note.dir==='up'?'#arrowUpImg': note.dir==='down'?'#arrowDownImg': note.dir==='left'?'#arrowLeftImg':'#arrowRightImg';
   const pos = dirToLaneXY(note.dir);
+  // Outline image (slightly larger, behind)
+  const outlineId = note.dir==='up'?'#arrowUpOutlineImg': note.dir==='down'?'#arrowDownOutlineImg': note.dir==='left'?'#arrowLeftOutlineImg':'#arrowRightOutlineImg';
+  const out = document.createElement('a-image');
+  out.setAttribute('src', outlineId);
+  out.setAttribute('position', `${pos.x} ${pos.y} ${NOTE_START_Z - 0.005}`);
+  out.setAttribute('width', '0.46');
+  out.setAttribute('height', '0.46');
+  out.setAttribute('material', 'transparent:true; opacity:0.95; depthTest:false');
+  root.appendChild(out);
+
+  // Core arrow
   const el = document.createElement('a-image');
   el.setAttribute('src', imgId);
   el.setAttribute('position', `${pos.x} ${pos.y} ${NOTE_START_Z}`);
-  el.setAttribute('width', '0.22');
-  el.setAttribute('height', '0.22');
-  el.setAttribute('material', 'transparent:true;opacity:1');
+  el.setAttribute('width', '0.36');
+  el.setAttribute('height', '0.36');
+  el.setAttribute('material', 'transparent:true;opacity:1; depthTest:false');
   root.appendChild(el);
   note.el = el;
+  note.outlineEl = out;
   APP.activeArrows.push(note);
 }
 
@@ -246,6 +258,7 @@ function loop(){
       if (!n.hit && Math.abs(delta) > JUDGE.good){
         n.miss = true;
         n.el.parentNode.removeChild(n.el);
+        if (n.outlineEl && n.outlineEl.parentNode) n.outlineEl.parentNode.removeChild(n.outlineEl);
         toRemove.push(n);
         applyJudge('miss');
       }
@@ -293,6 +306,9 @@ function tryHit(dir){
   if (note.el && note.el.parentNode){
     note.el.setAttribute('material','opacity:0.2');
     setTimeout(()=>{ if (note.el && note.el.parentNode) note.el.parentNode.removeChild(note.el); }, 50);
+  }
+  if (note.outlineEl && note.outlineEl.parentNode){
+    setTimeout(()=>{ if (note.outlineEl && note.outlineEl.parentNode) note.outlineEl.parentNode.removeChild(note.outlineEl); }, 60);
   }
 
   // Popup at lane position
