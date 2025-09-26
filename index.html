@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Healthy Hero VR — Grade 5</title>
+  <title>Healthy Hero VR — Grade 5 (Fixed)</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     body { margin:0; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
@@ -13,7 +13,6 @@
 <body class="noselect">
   <a-scene renderer="antialias: true; colorManagement: true" vr-mode-ui="enabled: true">
     <a-assets timeout="12000">
-      <!-- Hygiene (Handwash) assets -->
       <img id="step1" src="assets/step1.png">
       <img id="step2" src="assets/step2.png">
       <img id="step3" src="assets/step3.png">
@@ -33,9 +32,9 @@
 
     <!-- CAMERA + CURSOR -->
     <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="camera" camera look-controls wasd-controls>
+      <a-entity id="camera" camera look-controls wasd-controls raycaster="objects: .clickable; interval: 100">
         <a-entity 
-          cursor="fuse: true; fuseTimeout: 800"
+          cursor="fuse: true; fuseTimeout: 800; rayOrigin: mouse"
           position="0 0 -1"
           geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
           material="color: white; shader: flat; opacity: 0.9">
@@ -52,7 +51,6 @@
         <a-text value="Grade 5 — Health Education" color="#FDE68A" width="1.4" align="center" position="0 0.31 0"></a-text>
         <a-text value="Choose a game" color="#A7F3D0" width="1.2" align="center" position="0 0.18 0"></a-text>
 
-        <!-- Three module cards -->
         <a-entity id="btnHygiene" class="clickable"
                   geometry="primitive: plane; width: 0.5; height: 0.2"
                   material="color: #10b981; opacity: 0.95" position="-0.6 -0.02 0"
@@ -69,10 +67,10 @@
                   hh-button="label: Exercise; id: goExercise">
         </a-entity>
 
-        <a-text value="Gaze or tap to click • Supports mobile and VR" color="#93c5fd" width="1.4" align="center" position="0 -0.42 0"></a-text>
+        <a-text value="Gaze or tap to click • If desktop, use mouse; if VR, fix gaze until ring fills." color="#93c5fd" width="1.5" align="center" position="0 -0.42 0"></a-text>
       </a-entity>
 
-      <!-- HYGIENE MODULE MENU (Handwash game) -->
+      <!-- HYGIENE MENU -->
       <a-entity id="hygieneMenu" visible="false">
         <a-plane width="1.7" height="1.1" color="#1f2937" material="opacity:0.98" radius="0.06"></a-plane>
         <a-text value="Personal Hygiene — Handwashing" color="#ffffff" width="1.5" align="center" position="0 0.38 0"></a-text>
@@ -160,7 +158,7 @@
         <a-text id="resultStars" value="" color="#FDE68A" width="1.4" align="center" position="0 -0.06 0"></a-text>
         <a-entity id="btnReplay" class="clickable"
                   geometry="primitive: plane; width: 0.55; height: 0.14"
-                  material="color: #10b981; opacity: 0.95" position="-0.47 -0.28 0" hh-button="label: Play Again">
+                  material="color: #10b981; opacity: 0.95" position="-0.47 -0.28 0" hh-button="label: Play Again; id: practice">
         </a-entity>
         <a-entity id="btnBackModule" class="clickable"
                   geometry="primitive: plane; width: 0.55; height: 0.14"
