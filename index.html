@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Healthy Hero VR — Grade 5 (Fixed)</title>
+  <title>Healthy Hero VR — Grade 5 (Touch+Mouse Fix)</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     body { margin:0; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
@@ -30,15 +30,16 @@
 
     <a-sky src="#bg" color="#EEF5FF"></a-sky>
 
-    <!-- CAMERA + CURSOR -->
+    <!-- CAMERA + CURSOR (robust for mouse+touch+VR) -->
     <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="camera" camera look-controls wasd-controls raycaster="objects: .clickable; interval: 100">
-        <a-entity 
-          cursor="fuse: true; fuseTimeout: 800; rayOrigin: mouse"
-          position="0 0 -1"
+      <a-entity id="camera" camera look-controls wasd-controls>
+        <a-cursor id="cursor"
+          fuse="true" fuse-timeout="800"
+          raycaster="objects: .clickable; far: 15; interval: 0"
           geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
-          material="color: white; shader: flat; opacity: 0.9">
-        </a-entity>
+          material="color: white; shader: flat; opacity: 0.95"
+          position="0 0 -1">
+        </a-cursor>
       </a-entity>
     </a-entity>
 
@@ -67,7 +68,7 @@
                   hh-button="label: Exercise; id: goExercise">
         </a-entity>
 
-        <a-text value="Gaze or tap to click • If desktop, use mouse; if VR, fix gaze until ring fills." color="#93c5fd" width="1.5" align="center" position="0 -0.42 0"></a-text>
+        <a-text value="Desktop: use mouse click • Mobile: tap center • VR: gaze until ring fills" color="#93c5fd" width="1.55" align="center" position="0 -0.42 0"></a-text>
       </a-entity>
 
       <!-- HYGIENE MENU -->
@@ -173,5 +174,21 @@
 
     <script src="game.js"></script>
   </a-scene>
+
+  <script>
+    // Fallback: convert screen taps/clicks into 'click' on intersected entity if A-Frame misses it
+    (function(){
+      function triggerCursorClick(){
+        var cursor = document.querySelector('#cursor');
+        if (!cursor || !cursor.components || !cursor.components.raycaster) return;
+        var list = cursor.components.raycaster.intersectedEls || [];
+        if (list.length > 0) {
+          list[0].emit('click');
+        }
+      }
+      window.addEventListener('mousedown', triggerCursorClick);
+      window.addEventListener('touchstart', triggerCursorClick, {passive:true});
+    })();
+  </script>
 </body>
 </html>
