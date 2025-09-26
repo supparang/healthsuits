@@ -3,129 +3,94 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Personal Hygiene VR - Handwash Quest</title>
+  <title>WebXR Health Game — Clean Start (P.5)</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script>
-    window.APP_CFG = {
-      TEXT: { hud:0.045, title:0.065, hint:0.04, label:0.042, button:0.05 }
-    };
-  </script>
-  <script src="./game.js"></script>
+  <script src="./app.js"></script>
   <style>
     html, body { margin:0; height:100%; background:#000; }
-    .desktop-help { position:fixed; left:12px; bottom:12px; z-index:10; color:#fff; font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; background:rgba(0,0,0,.35); padding:.6rem .8rem; border-radius:.6rem; line-height:1.35; }
-    .desktop-help kbd{ background:#222; border:1px solid #444; padding:2px 6px; border-radius:4px; font-size:.85em; }
-    .enter-vr-tip { position:fixed; right:12px; bottom:12px; z-index:10; color:#fff; font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; background:rgba(0,0,0,.35); padding:.6rem .8rem; border-radius:.6rem; line-height:1.35; }
+    .tip { position:fixed; left:12px; bottom:12px; z-index:10; color:#fff; 
+           font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif;
+           background:rgba(0,0,0,.35); padding:.6rem .8rem; border-radius:.6rem; line-height:1.35; }
   </style>
 </head>
 <body>
-  <div class="desktop-help">เคล็ดลับ: ใช้เมาส์คลิกวัตถุ <kbd>Left Click</kbd> / มองค้างเพื่อกดปุ่ม (gaze)</div>
-  <div class="enter-vr-tip">แตะปุ่ม <strong>Enter VR</strong> เพื่อเล่นในแว่น</div>
-
-  <a-scene renderer="colorManagement: true; physicallyCorrectLights: true" background="color: #10141a"
-           cursor="rayOrigin: mouse"
-           xr-mode-ui="enabled: true">
+  <div class="tip">แตะ <strong>Enter VR</strong> เพื่อเข้าโหมดแว่น • คลิก/แตะ หรือมองค้าง (gaze) เพื่อตอบสนอง</div>
+  <a-scene renderer="colorManagement:true; physicallyCorrectLights:true" background="color:#0e131a"
+           cursor="rayOrigin: mouse" xr-mode-ui="enabled:true">
     <a-assets timeout="15000">
-      <img id="img-soap" src="./assets/soap.png">
-      <img id="img-water" src="./assets/water.png">
-      <img id="img-hands" src="./assets/hands.png">
-      <img id="img-mask" src="./assets/mask.png">
-      <img id="img-tooth" src="./assets/tooth.png">
-      <audio id="audio-ok" src="./assets/correct.mp3"></audio>
-      <audio id="audio-ng" src="./assets/wrong.mp3"></audio>
-      <audio id="audio-bgm" src="./assets/bgm.mp3"></audio>
-      <img id="img-logo" src="./assets/logo.png">
+      <img id="i-logo" src="./assets/logo.png">
+      <img id="i-hands" src="./assets/hands.png">
+      <img id="i-food" src="./assets/food.png">
+      <img id="i-fitness" src="./assets/fitness.png">
     </a-assets>
 
+    <!-- Camera Rig -->
     <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="camera" camera look-controls wasd-controls="acceleration:20">
-        <a-entity id="gaze"
-                  cursor="fuse:true; fuseTimeout:900"
-                  raycaster="objects:.clickable"
-                  position="0 0 -0.5"
-                  geometry="primitive:ring; radiusInner:0.004; radiusOuter:0.006"
-                  material="color:#fff; shader:flat">
-        </a-entity>
+      <a-entity camera look-controls>
+        <a-entity id="gaze" cursor="fuse:true; fuseTimeout:900" raycaster="objects:.clickable"
+                  position="0 0 -0.5" geometry="primitive:ring; radiusInner:0.004; radiusOuter:0.006"
+                  material="color:#fff; shader:flat"></a-entity>
       </a-entity>
     </a-entity>
 
+    <!-- Lights -->
     <a-entity light="type:ambient; intensity:0.55"></a-entity>
-    <a-entity light="type:directional; intensity:0.85" position="0 3 2"></a-entity>
+    <a-entity light="type:directional; intensity:0.9" position="0 3 2"></a-entity>
 
-    <!-- Raised UI positions -->
+    <!-- Splash -->
     <a-entity id="ui-splash" position="0 2.0 -1.4" visible="true">
-      <a-plane width="1.35" height="0.84" color="#0e1b27" material="opacity:0.92" radius="0.04"></a-plane>
-      <a-image src="#img-logo" position="-0.53 0.15 0.01" width="0.28" height="0.28"></a-image>
-      <a-entity id="splash-title" text="value: Handwash Quest; color:#e6f3ff; align:left; wrapCount:24; width:1.8" position="-0.35 0.22 0.01"></a-entity>
-      <a-entity text="value: เกมฝึกสุขอนามัยส่วนบุคคลสำหรับ ป.5; color:#cfe9ff; align:left; wrapCount:28; width:1.6" position="-0.35 0.065 0.01"></a-entity>
-      <a-entity text="value: แตะปุ่ม ▶ เพื่อไปเมนูหลัก; color:#a9d6ff; align:left; wrapCount:30; width:1.6" position="-0.35 -0.05 0.01"></a-entity>
-      <a-entity id="btn-splash-continue" class="clickable" position="0.45 -0.23 0.01"
-                geometry="primitive:plane; width:0.44; height:0.16" material="color:#2a84ff"
-                event-set__hover="_event:mouseenter; material.color:#3b94ff"
-                event-set__out="_event:mouseleave; material.color:#2a84ff">
-          <a-entity text="value: ▶ ไปเมนู; align:center; color:#fff; width:1.6"></a-entity>
-      </a-entity>
-    </a-entity>
-
-    <a-entity id="ui-menu" position="0 2.0 -1.45" visible="false">
-      <a-plane width="1.6" height="1.0" color="#0e1b27" material="opacity:0.92" radius="0.04"></a-plane>
-      <a-entity text="value: เลือกโหมด; color:#e6f3ff; align:center; width:2.4" position="0 0.38 0.01"></a-entity>
-      <a-entity id="btn-practice" class="clickable" position="-0.45 0.12 0.01"
-                geometry="primitive:plane; width:0.6; height:0.2" material="color:#2a84ff">
-          <a-entity text="value: โหมดฝึก (ไม่จับเวลา); align:center; color:#fff; width:2.2"></a-entity>
-      </a-entity>
-      <a-entity id="btn-game" class="clickable" position="0.45 0.12 0.01"
-                geometry="primitive:plane; width:0.6; height:0.2" material="color:#2a84ff">
-          <a-entity text="value: เริ่มเกม (จับเวลา); align:center; color:#fff; width:2.2"></a-entity>
-      </a-entity>
-      <a-entity id="btn-how" class="clickable" position="-0.45 -0.18 0.01"
-                geometry="primitive:plane; width:0.6; height:0.2" material="color:#1f6b3a">
-          <a-entity text="value: วิธีเล่น; align:center; color:#fff; width:2.2"></a-entity>
-      </a-entity>
-      <a-entity id="btn-exit" class="clickable" position="0.45 -0.18 0.01"
-                geometry="primitive:plane; width:0.6; height:0.2" material="color:#5a2a2a">
-          <a-entity text="value: ออกเกม; align:center; color:#fff; width:2.2"></a-entity>
-      </a-entity>
-    </a-entity>
-
-    <a-entity id="ui-how" position="0 2.0 -1.45" visible="false">
-      <a-plane width="1.6" height="1.05" color="#0e1b27" material="opacity:0.96" radius="0.04"></a-plane>
-      <a-entity text="value: วิธีเล่น Handwash Quest; color:#e6f3ff; align:center; width:2.4" position="0 0.42 0.01"></a-entity>
-      <a-entity text="value: เลือกเป้าหมาย 7 ขั้นตอนตามลำดับ (วงเขียวคือขั้นต่อไป). โหมดเกมจะจับเวลาและคิดคะแนน; color:#cfe9ff; align:center; wrapCount:38; width:2.2" position="0 0.18 0.01"></a-entity>
-      <a-entity text="value: การควบคุม: มองเป้า + ค้างเพื่อกด (gaze) หรือแตะหน้าจอ/คลิกเมาส์; color:#a9d6ff; align:center; wrapCount:38; width:2.2" position="0 -0.02 0.01"></a-entity>
-      <a-entity text="value: เคล็ดลับ: อ่านคำใบ้ที่ HUD มุมบน; color:#a9d6ff; align:center; wrapCount:38; width:2.2" position="0 -0.16 0.01"></a-entity>
-      <a-entity id="btn-how-back" class="clickable" position="0 -0.38 0.01"
+      <a-plane width="1.6" height="0.9" color="#102033" material="opacity:0.95" radius="0.04"></a-plane>
+      <a-image src="#i-logo" position="-0.55 0.18 0.01" width="0.32" height="0.32"></a-image>
+      <a-entity text="value: WebXR Health Game (P.5); color:#e6f3ff; align:left; width:2.4" position="-0.25 0.28 0.01"></a-entity>
+      <a-entity text="value: เริ่มเกมใหม่ — โฟกัสที่อนามัยส่วนบุคคลก่อน; color:#cfe9ff; align:left; wrapCount:30; width:2.0" position="-0.25 0.08 0.01"></a-entity>
+      <a-entity id="btn-to-menu" class="clickable" position="0.5 -0.22 0.01"
                 geometry="primitive:plane; width:0.5; height:0.18" material="color:#2a84ff">
-          <a-entity text="value: ◀ กลับเมนู; align:center; color:#fff; width:2.0"></a-entity>
+        <a-entity text="value: ▶ ไปเมนู; align:center; color:#fff; width:2.0"></a-entity>
       </a-entity>
     </a-entity>
 
-    <a-entity id="hud" position="0 2.3 -1.7" visible="false">
-      <a-plane width="1.7" height="0.42" color="#0e1b27" material="opacity:0.6" radius="0.03"></a-plane>
-      <a-entity id="hud-title" position="-0.78 0.12 0.01" text="value: ล้างมือ 7 ขั้น; color:#e6f3ff; align:left; width:2.6"></a-entity>
-      <a-entity id="hud-hint" position="-0.78 -0.05 0.01" text="value: แตะเป้าหมายตามลำดับ; color:#cfe9ff; align:left; wrapCount:42; width:2.6"></a-entity>
-      <a-entity id="hud-score" position="0.55 0.12 0.01" text="value: คะแนน: 0; color:#e6f3ff; align:right; width:2.2"></a-entity>
-      <a-entity id="hud-timer" position="0.55 -0.05 0.01" text="value: เวลา: --; color:#ffd479; align:right; width:2.2"></a-entity>
-    </a-entity>
-
-    <a-entity id="stage" position="0 2.0 -2.6" visible="false">
-      <a-plane width="3.4" height="1.8" color="#12202c" material="opacity:0.9" position="0 0 0" radius="0.03"></a-plane>
-      <a-entity id="target-wrap"></a-entity>
-      <a-entity id="progress" position="0 -0.9 0.01">
-        <a-plane width="2.6" height="0.06" color="#0b2a1a"></a-plane>
-        <a-plane id="progress-fill" width="0.0" height="0.06" color="#1ecf72" position="-1.3 0 0.01" anchor="left"></a-plane>
+    <!-- Main Menu -->
+    <a-entity id="ui-menu" position="0 2.0 -1.45" visible="false">
+      <a-plane width="1.8" height="1.1" color="#102033" material="opacity:0.95" radius="0.04"></a-plane>
+      <a-entity text="value: เลือกหมวดเกม; color:#e6f3ff; align:center; width:2.6" position="0 0.4 0.01"></a-entity>
+      <a-entity id="btn-hygiene" class="clickable" position="-0.5 0.1 0.01"
+                geometry="primitive:plane; width:0.7; height:0.22" material="color:#1f6b3a">
+        <a-image src="#i-hands" position="-0.26 0 0.01" width="0.18" height="0.18"></a-image>
+        <a-entity text="value: อนามัยส่วนบุคคล; align:center; color:#fff; width:2.4" position="0.12 0 0.01"></a-entity>
+      </a-entity>
+      <a-entity id="btn-nutrition" class="clickable" position="0.5 0.1 0.01"
+                geometry="primitive:plane; width:0.7; height:0.22" material="color:#2a84ff">
+        <a-image src="#i-food" position="-0.26 0 0.01" width="0.18" height="0.18"></a-image>
+        <a-entity text="value: โภชนาการ (เร็ว ๆ นี้); align:center; color:#fff; width:2.4" position="0.12 0 0.01"></a-entity>
+      </a-entity>
+      <a-entity id="btn-fitness" class="clickable" position="0 -0.2 0.01"
+                geometry="primitive:plane; width:1.5; height:0.22" material="color:#5a2a2a">
+        <a-image src="#i-fitness" position="-0.62 0 0.01" width="0.18" height="0.18"></a-image>
+        <a-entity text="value: การออกกำลังกาย (เร็ว ๆ นี้); align:center; color:#fff; width:2.4" position="0.12 0 0.01"></a-entity>
       </a-entity>
     </a-entity>
 
-    <a-entity id="ui-result" position="0 2.0 -1.45" visible="false">
-      <a-plane width="1.6" height="1.0" color="#0e1b27" material="opacity:0.96" radius="0.04"></a-plane>
-      <a-entity id="result-title" text="value: สรุปผล; color:#e6f3ff; align:center; width:2.6" position="0 0.32 0.01"></a-entity>
-      <a-entity id="result-lines" text="value: ...; color:#cfe9ff; align:center; wrapCount:40; width:2.2" position="0 0.05 0.01"></a-entity>
-      <a-entity id="btn-retry" class="clickable" position="-0.45 -0.28 0.01" geometry="primitive:plane; width:0.6; height:0.2" material="color:#2a84ff">
+    <!-- Hygiene Game Panel (fresh minimal) -->
+    <a-entity id="ui-hygiene" position="0 2.0 -1.6" visible="false">
+      <a-plane width="2.8" height="1.6" color="#0f1e2a" material="opacity:0.95" radius="0.03"></a-plane>
+      <!-- HUD -->
+      <a-entity id="hud" position="0 0.68 0.01">
+        <a-plane width="2.6" height="0.18" color="#0e1b27" material="opacity:0.7" radius="0.02"></a-plane>
+        <a-entity id="hud-hint" position="-1.22 0 0.02" text="value: เลือกลำดับล้างมือ 7 ขั้น (วงเขียวคือขั้นถัดไป); color:#cfe9ff; align:left; wrapCount:48; width:2.4"></a-entity>
+        <a-entity id="hud-score" position="0.9 0 0.02" text="value: คะแนน: 0; color:#e6f3ff; align:right; width:2.0"></a-entity>
+      </a-entity>
+      <!-- Targets grid -->
+      <a-entity id="grid" position="0 -0.05 0.01"></a-entity>
+      <!-- Controls -->
+      <a-entity id="row-controls" position="0 -0.66 0.01">
+        <a-entity id="btn-back-menu" class="clickable" position="-0.8 0 0.01"
+                  geometry="primitive:plane; width:0.6; height:0.18" material="color:#2a84ff">
+          <a-entity text="value: ◀ เมนู; align:center; color:#fff; width:2.2"></a-entity>
+        </a-entity>
+        <a-entity id="btn-restart" class="clickable" position="0.8 0 0.01"
+                  geometry="primitive:plane; width:0.6; height:0.18" material="color:#1f6b3a">
           <a-entity text="value: เล่นอีกครั้ง; align:center; color:#fff; width:2.2"></a-entity>
-      </a-entity>
-      <a-entity id="btn-menu" class="clickable" position="0.45 -0.28 0.01" geometry="primitive:plane; width:0.6; height:0.2" material="color:#1f6b3a">
-          <a-entity text="value: กลับเมนู; align:center; color:#fff; width:2.2"></a-entity>
+        </a-entity>
       </a-entity>
     </a-entity>
   </a-scene>
