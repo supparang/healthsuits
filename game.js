@@ -1,4 +1,4 @@
-// VR Dance Game (A-Frame) PRO: feedback, stars, hand-tracking pinch.
+// VR Dance Game (English-only) with: big arrows + outline, stars, floating text, hand-tracking, no-flicker UI, and safe raycasting.
 const JUDGE = { perfect: 0.15, good: 0.30 };
 const SPEED = 0.9;
 const NOTE_START_Z = -1.6;
@@ -23,13 +23,13 @@ function buildBeatmap(bpm=100){
 }
 const BEATMAP = buildBeatmap(100);
 
-// --- Feedback popup (floating text) ---
+// Feedback popup
 function spawnPopup(text, color, atPos){
   const root = APP.arena || document.querySelector('a-scene');
   const e = document.createElement('a-entity');
   const x = atPos?.x ?? 0, y = (atPos?.y ?? 1.6) + 0.12, z = (APP.arena ? 0 : -1.6);
   e.setAttribute('position', `${x} ${y} ${z}`);
-  e.innerHTML = `<a-text value="${text}" color="${color}" width="0.8" align="center"></a-text>`;
+  e.innerHTML = `<a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="${text}" color="${color}" width="0.8" align="center"></a-text>`;
   root.appendChild(e);
   e.setAttribute('animation__move', 'property: position; to: ' + x + ' ' + (y+0.18) + ' ' + z + '; dur: 550; easing: easeOutQuad');
   e.setAttribute('animation__fade', 'property: components.text.material.opacity; to: 0; dur: 550; delay: 100; easing: linear');
@@ -65,7 +65,6 @@ window.APP = {
   notes: [],
   activeArrows: [],
   audio: null,
-  startPerf: 0,
   arena: null
 };
 
@@ -105,7 +104,6 @@ function setMenuClickables(enabled){
   });
 }
 
-
 function showMenu(){
   APP.state='menu';
   setVisible('#ui-splash', false);
@@ -118,10 +116,10 @@ function showMenu(){
 }
 
 function showHowto(){
-  setMenuClickables(true);
   APP.state='howto';
   setVisible('#ui-menu', false);
   setVisible('#ui-howto', true);
+  setMenuClickables(true);
 }
 
 function updateHUD(){
@@ -145,7 +143,7 @@ function startGame(mode){
   APP.perfectCount = 0;
   APP.goodCount = 0;
   APP.missCount = 0;
-  APP.notes = BEATMAP.map(n => ({...n, hit:false, miss:false, spawned:false, el:null}));
+  APP.notes = BEATMAP.map(n => ({...n, hit:false, miss:false, spawned:false, el:null, outlineEl:null}));
   APP.activeArrows = [];
   APP.arena = $('#arena');
   setVisible('#ui-menu', false);
@@ -153,7 +151,6 @@ function startGame(mode){
   setVisible('#arena', true);
   setVisible('#hud', true);
   updateHUD();
-  setupPinchHandlers();
   startAudio();
   requestAnimationFrame(loop);
 }
@@ -169,13 +166,13 @@ function finishGame(){
   const overlay = document.createElement('a-entity');
   overlay.setAttribute('position','0 1.6 -1.6');
   overlay.innerHTML = `
-    <a-plane width="2.2" height="1.35" color="#162235" material="opacity:0.95"></a-plane>
-    <a-text value="Results" color="#fff" width="1.9" align="center" position="0 0.45 0"></a-text>
-    <a-text value="Score: ${APP.score}   Max Combo: ${APP.maxCombo}" color="#bfe" width="1.8" align="center" position="0 0.2 0"></a-text>
-    <a-text value="Accuracy: ${acc}%   Perfect: ${APP.perfectCount}   Good: ${APP.goodCount}   Miss: ${APP.missCount}" color="#bfe" width="1.8" align="center" position="0 -0.02 0"></a-text>
-    <a-text value="${starString(stars)}" color="#ffd166" width="1.2" align="center" position="0 -0.28 0"></a-text>
-    <a-plane id="btn-retry" class="clickable" width="1.3" height="0.24" color="#60a5fa" position="0 -0.52 0">
-      <a-text value="Back to Menu" align="center" color="#062" width="1.0" position="0 0 0.01"></a-text>
+    <a-plane width="2.2" height="1.35" color="#162235" material="opacity:0.95; depthTest:false; transparent:true"></a-plane>
+    <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="Results" color="#fff" width="1.9" align="center" position="0 0.45 0.03"></a-text>
+    <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="Score: ${APP.score}   Max Combo: ${APP.maxCombo}" color="#bfe" width="1.8" align="center" position="0 0.2 0.03"></a-text>
+    <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="Accuracy: ${acc}%   Perfect: ${APP.perfectCount}   Good: ${APP.goodCount}   Miss: ${APP.missCount}" color="#bfe" width="1.8" align="center" position="0 -0.02 0.03"></a-text>
+    <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="${starString(stars)}" color="#ffd166" width="1.2" align="center" position="0 -0.28 0.03"></a-text>
+    <a-plane id="btn-retry" class="clickable" width="1.3" height="0.24" color="#60a5fa" position="0 -0.52 0" material="depthTest:false; transparent:true">
+      <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="Back to Menu" align="center" color="#062" width="1.0" position="0 0 0.03"></a-text>
     </a-plane>
   `;
   document.querySelector('a-scene').appendChild(overlay);
@@ -196,7 +193,6 @@ function startAudio(){
   APP.audio = el;
   try { el.currentTime = 0; } catch(e){}
   el.play().catch(()=>{});
-  APP.startPerf = performance.now()/1000;
 }
 
 function stopAudio(){
@@ -206,11 +202,11 @@ function stopAudio(){
 }
 
 function spawnNote(note){
-  const root = $('#spawn-root');
+  const root = document.querySelector('#spawn-root');
   const imgId = note.dir==='up'?'#arrowUpImg': note.dir==='down'?'#arrowDownImg': note.dir==='left'?'#arrowLeftImg':'#arrowRightImg';
-  const pos = dirToLaneXY(note.dir);
-  // Outline image (slightly larger, behind)
   const outlineId = note.dir==='up'?'#arrowUpOutlineImg': note.dir==='down'?'#arrowDownOutlineImg': note.dir==='left'?'#arrowLeftOutlineImg':'#arrowRightOutlineImg';
+  const pos = dirToLaneXY(note.dir);
+
   const out = document.createElement('a-image');
   out.setAttribute('src', outlineId);
   out.setAttribute('position', `${pos.x} ${pos.y} ${NOTE_START_Z - 0.005}`);
@@ -219,7 +215,6 @@ function spawnNote(note){
   out.setAttribute('material', 'transparent:true; opacity:0.95; depthTest:false');
   root.appendChild(out);
 
-  // Core arrow
   const el = document.createElement('a-image');
   el.setAttribute('src', imgId);
   el.setAttribute('position', `${pos.x} ${pos.y} ${NOTE_START_Z}`);
@@ -227,6 +222,7 @@ function spawnNote(note){
   el.setAttribute('height', '0.36');
   el.setAttribute('material', 'transparent:true;opacity:1; depthTest:false');
   root.appendChild(el);
+
   note.el = el;
   note.outlineEl = out;
   APP.activeArrows.push(note);
@@ -244,7 +240,6 @@ function dirToLaneXY(dir){
 
 function loop(){
   if (APP.state!=='playing') return;
-
   const t = getSongTime();
   if (!APP.audio || APP.audio.paused || t <= 0.05){
     updateHUD();
@@ -269,6 +264,7 @@ function loop(){
     const pos = n.el.getAttribute('position');
     let z = pos.z + SPEED * dt;
     n.el.setAttribute('position', `${pos.x} ${pos.y} ${z}`);
+    n.outlineEl && n.outlineEl.setAttribute('position', `${pos.x} ${pos.y} ${z-0.005}`);
     if (z >= HIT_Z + 0.08){
       const delta = t - n.time;
       if (!n.hit && Math.abs(delta) > JUDGE.good){
@@ -327,10 +323,8 @@ function tryHit(dir){
     setTimeout(()=>{ if (note.outlineEl && note.outlineEl.parentNode) note.outlineEl.parentNode.removeChild(note.outlineEl); }, 60);
   }
 
-  // Popup at lane position
   const p = dirToLaneXY(dir);
   spawnPopup(result.toUpperCase(), result==='perfect' ? '#34d399' : '#60a5fa', {x:p.x, y:p.y});
-
   applyJudge(result);
 }
 
@@ -342,7 +336,7 @@ function applyJudge(j){
   updateHUD();
 }
 
-// --- Hand-tracking pinch handling ---
+// Hand-tracking: pinch to hit nearest lane
 function setupPinchHandlers(){
   ['#leftHand','#rightHand'].forEach(id => {
     const hand = document.querySelector(id);
