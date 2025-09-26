@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>VR เกมล้างมือ ป.5 (เสียงนับถอยหลัง + การ์ตูนมือ)</title>
+  <title>VR เกมล้างมือ ป.5 — Combined</title>
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <style>
     html, body { margin:0; padding:0; height:100%; background:#000; }
@@ -21,6 +21,7 @@
       <audio id="sfx-warn" src="assets/beep_warn.wav" preload="auto"></audio>
       <audio id="sfx-correct" src="assets/correct.wav" preload="auto"></audio>
       <audio id="sfx-wrong" src="assets/wrong.wav" preload="auto"></audio>
+      <audio id="ui-click" src="assets/ui_click.wav" preload="auto"></audio>
 
       <!-- Cartoon guides -->
       <img id="guide-palm"    src="assets/hand_palm.svg">
@@ -30,6 +31,9 @@
       <img id="guide-tips"    src="assets/hand_tips.svg">
       <img id="guide-thumb"   src="assets/hand_thumb.svg">
       <img id="guide-wrist"   src="assets/hand_wrist.svg">
+
+      <!-- Splash art -->
+      <img id="splash-art" src="assets/splash.svg">
     </a-assets>
 
     <a-sky color="#0b1020"></a-sky>
@@ -50,13 +54,84 @@
     <a-entity id="hud" position="0 1.6 -1.25">
       <a-entity id="title" text="value: เกมล้างมือ 7 ขั้นตอน (ป.5); width: 1.5; align: center; color: #fff"></a-entity>
       <a-entity id="status" position="0 -0.10 0"
-        text="value: เลือกโหมดเพื่อเริ่ม; width: 1.5; align: center; color: #9cf"></a-entity>
+        text="value: แตะเพื่อเข้าสู่หน้าเมนู; width: 1.5; align: center; color: #9cf"></a-entity>
       <a-entity id="score" position="0 -0.20 0"
-        text="value: คะแนน: 0 | ขั้น: 1/7 | เวลา: 00s; width: 1.5; align: center; color: #fff"></a-entity>
+        text="value: คะแนน: 0 | ขั้น: 0/7 | เวลา: 00s; width: 1.5; align: center; color: #fff"></a-entity>
     </a-entity>
 
-    <!-- Menu -->
-    <a-entity id="menu" position="0 1.1 -2">
+    <!-- Splash Screen -->
+    <a-entity id="splash" position="0 1.4 -1.6">
+      <a-entity geometry="primitive: plane; width: 1.6; height: 1.2"
+        material="color: #0f172a; opacity: 0.9"></a-entity>
+
+      <a-entity position="0 0.34 0.01"
+        text="value: เปิดโลกสุขภาพมือสะอาด; width: 1.4; align: center; color: #ffffff"></a-entity>
+
+      <a-entity position="0 0.14 0.01"
+        text="value: เกมล้างมือ 7 ขั้นตอน สำหรับชั้นประถมปีที่ 5; width: 1.4; align: center; color: #cbd5e1"></a-entity>
+
+      <a-entity geometry="primitive: plane; width: 0.9; height: 0.5"
+                material="shader: flat; src: #splash-art" position="0 -0.06 0.01"></a-entity>
+
+      <a-entity id="btnEnter" class="clickable" position="0 -0.46 0.01"
+        geometry="primitive: plane; width: 0.6; height: 0.2"
+        material="color: #22c55e; opacity: 0.95"
+        event-set__enter="_event: mouseenter; material.color: #16a34a"
+        event-set__leave="_event: mouseleave; material.color: #22c55e">
+        <a-entity position="0 0 0.01" text="value: ไปที่เมนู; width: 0.9; align: center; color: #fff"></a-entity>
+      </a-entity>
+
+      <a-entity id="btnHow" class="clickable" position="-0.46 -0.46 0.01"
+        geometry="primitive: plane; width: 0.32; height: 0.2"
+        material="color: #334155; opacity: 0.95"
+        event-set__enter="_event: mouseenter; material.color: #475569"
+        event-set__leave="_event: mouseleave; material.color: #334155">
+        <a-entity position="0 0 0.01" text="value: วิธีเล่น; width: 0.7; align: center; color: #fff"></a-entity>
+      </a-entity>
+
+      <a-entity id="btnAbout" class="clickable" position="0.46 -0.46 0.01"
+        geometry="primitive: plane; width: 0.32; height: 0.2"
+        material="color: #334155; opacity: 0.95"
+        event-set__enter="_event: mouseenter; material.color: #475569"
+        event-set__leave="_event: mouseleave; material.color: #334155">
+        <a-entity position="0 0 0.01" text="value: เกี่ยวกับ; width: 0.7; align: center; color: #fff"></a-entity>
+      </a-entity>
+    </a-entity>
+
+    <!-- Overlay: How to Play -->
+    <a-entity id="howOverlay" visible="false" position="0 1.4 -1.5">
+      <a-entity geometry="primitive: plane; width: 1.8; height: 1.1" material="color:#0b132b; opacity:0.96"></a-entity>
+      <a-entity position="0 0.42 0.01" text="value: วิธีเล่น; width: 1.6; align: center; color:#fff"></a-entity>
+      <a-entity position="0 0.18 0.01" text="value: • ใช้การ 'จ้อง' หรือ แตะบนหน้าจอ เพื่อเลือกเป้า; width: 1.6; align: center; color:#cbd5e1"></a-entity>
+      <a-entity position="0 0.04 0.01" text="value: • ทำตามลำดับ 7 ขั้นตอนให้ถูกต้อง; width: 1.6; align: center; color:#cbd5e1"></a-entity>
+      <a-entity position="0 -0.10 0.01" text="value: • โหมดจับเวลา: ระวังเวลาหมด มีเสียงเตือนช่วงท้าย; width: 1.6; align: center; color:#cbd5e1"></a-entity>
+      <a-entity position="0 -0.24 0.01" text="value: • เลือก 'โหมดฝึก' ก่อนเพื่อเรียนรู้ทีละขั้น; width: 1.6; align: center; color:#cbd5e1"></a-entity>
+      <a-entity id="btnCloseHow" class="clickable" position="0 -0.44 0.01"
+        geometry="primitive: plane; width: 0.5; height: 0.2"
+        material="color:#ef4444; opacity:0.95"
+        event-set__enter="_event: mouseenter; material.color: #dc2626"
+        event-set__leave="_event: mouseleave; material.color: #ef4444">
+        <a-entity position="0 0 0.01" text="value: ปิด; width: 0.8; align: center; color:#fff"></a-entity>
+      </a-entity>
+    </a-entity>
+
+    <!-- Overlay: About -->
+    <a-entity id="aboutOverlay" visible="false" position="0 1.4 -1.5">
+      <a-entity geometry="primitive: plane; width: 1.8; height: 0.9" material="color:#0b132b; opacity:0.96"></a-entity>
+      <a-entity position="0 0.26 0.01" text="value: เกี่ยวกับเกม; width: 1.6; align: center; color:#fff"></a-entity>
+      <a-entity position="0 0.02 0.01" text="value: สร้างเพื่อส่งเสริมสุขอนามัย ปลูกฝังนิสัยล้างมือ 7 ขั้นตอน; width: 1.6; align: center; color:#cbd5e1"></a-entity>
+      <a-entity position="0 -0.12 0.01" text="value: เครื่องมือ: A-Frame + WebXR (Android Chrome แนะนำ); width: 1.6; align: center; color:#cbd5e1"></a-entity>
+      <a-entity id="btnCloseAbout" class="clickable" position="0 -0.36 0.01"
+        geometry="primitive: plane; width: 0.5; height: 0.2"
+        material="color:#ef4444; opacity:0.95"
+        event-set__enter="_event: mouseenter; material.color: #dc2626"
+        event-set__leave="_event: mouseleave; material.color: #ef4444">
+        <a-entity position="0 0 0.01" text="value: ปิด; width: 0.8; align: center; color:#fff"></a-entity>
+      </a-entity>
+    </a-entity>
+
+    <!-- Menu (hidden until splash → menu) -->
+    <a-entity id="menu" visible="false" position="0 1.1 -2">
       <a-entity id="btnStart" class="clickable" geometry="primitive: plane; width: 0.7; height: 0.22"
         material="color: #2e7d32; opacity: 0.95"
         event-set__enter="_event: mouseenter; material.color: #43a047"
@@ -99,7 +174,7 @@
       </a-entity>
     </a-entity>
 
-    <!-- World -->
+    <!-- Game world -->
     <a-entity id="world"></a-entity>
 
     <a-entity geometry="primitive: circle; radius: 6" rotation="-90 0 0"
