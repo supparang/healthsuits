@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="384" viewBox="0 0 512 384">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff59d"/>
+      <stop offset="100%" stop-color="#ffe082"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="384" rx="28" fill="url(#g)"/>
+  <!-- playful bubbles -->
+  <g fill="#ffffff" opacity="0.25">
+    <circle cx="68" cy="64" r="18"/><circle cx="420" cy="70" r="14"/>
+    <circle cx="440" cy="300" r="20"/><circle cx="84" cy="312" r="16"/>
+  </g>
+  <!-- hand cartoon (generic) -->
+  <g fill="#ffe0b2" stroke="#d7b899" stroke-width="4">
+    <path d="M210 250c-24 0-40-18-40-42V150c0-10 8-18 18-18s18 8 18 18v26h10v-40c0-10 8-18 18-18s18 8 18 18v40h10v-30c0-10 8-18 18-18s18 8 18 18v50c0 26-22 48-48 48h-38l-22 24z"/>
+  </g>
+  <text x="256" y="60" font-family="Tahoma, Arial, sans-serif" font-size="28" fill="#4e342e" text-anchor="middle">1) ฝ่ามือ</text>
+  <g font-family="Tahoma, Arial, sans-serif" font-size="16" fill="#4e342e">
+    <text x="256" y="350" text-anchor="middle">ทำตามภาพประกอบให้ถูกลำดับ</text>
+  </g>
+</svg>
