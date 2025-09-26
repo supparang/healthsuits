@@ -29,6 +29,13 @@
         <audio id="sfxSuccess" src="./assets/success.mp3"></audio>
         <audio id="sfxWrong" src="./assets/wrong.mp3"></audio>
         <audio id="bgm" src="./assets/bgm.mp3"></audio>
+              <img id="stepImg0" src="./assets/hygiene_1.jpg"/>
+        <img id="stepImg1" src="./assets/hygiene_2.jpg"/>
+        <img id="stepImg2" src="./assets/hygiene_3.jpg"/>
+        <img id="stepImg3" src="./assets/hygiene_4.jpg"/>
+        <img id="stepImg4" src="./assets/hygiene_5.jpg"/>
+        <img id="stepImg5" src="./assets/hygiene_6.jpg"/>
+        <img id="stepImg6" src="./assets/hygiene_7.jpg"/>
       </a-assets>
 
       <!-- Sky / Room -->
@@ -131,6 +138,15 @@
         </a-entity>
       </a-entity>
 
+      
+      <!-- Hygiene Step Illustration -->
+      <a-entity id="hygienePanel" visible="false" position="0 1.45 -1.25">
+        <a-entity id="hygieneImage" geometry="primitive: plane; width: 0.9; height: 0.5"
+                  material="color: #000; opacity: 0.9"></a-entity>
+        <a-entity id="hygieneCaption" position="0 -0.36 0.01"
+                  text="value: ขั้นตอนล้างมือ; width: 2.6; align: center; color: #fff; wrapCount: 36"></a-entity>
+      </a-entity>
+    
       <!-- Game Root -->
       <a-entity id="gameRoot" visible="false"></a-entity>
 
