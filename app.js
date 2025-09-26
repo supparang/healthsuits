@@ -115,9 +115,14 @@
 
   function start(mode){
     state.mode = mode;
+    // Always ensure only hygiene panel is visible
+    show('#ui-splash', false);
+    show('#ui-menu', false);
+    show('#ui-hygiene', true);
+    show('#ui-result', false);
+
     reset();
     state.playing = true;
-    show('#ui-result', false);
     if (state.mode==='game') startTimer();
   }
 
@@ -171,15 +176,17 @@
   function bindUI(){
     $('#btn-to-menu').addEventListener('click', ()=>{ show('#ui-splash',false); show('#ui-menu',true); });
     $('#btn-hygiene').addEventListener('click', ()=>{
-      show('#ui-menu', false); show('#ui-hygiene', true);
-      reset(); // wait for user to choose mode
+      show('#ui-splash', false);
+      show('#ui-menu', false);
+      show('#ui-hygiene', true);
+      reset();
     });
     $('#btn-back-menu').addEventListener('click', ()=>{ show('#ui-hygiene',false); show('#ui-menu',true); stopTimer(); });
     $('#btn-restart').addEventListener('click', ()=>{ start(state.mode); });
 
     // Mode buttons
-    $('#btn-start-practice').addEventListener('click', ()=> start('practice'));
-    $('#btn-start-game').addEventListener('click', ()=> start('game'));
+    $('#btn-start-practice').addEventListener('click', ()=> { show('#ui-menu', false); start('practice'); });
+    $('#btn-start-game').addEventListener('click', ()=> { show('#ui-menu', false); start('game'); });
 
     // Result panel controls
     $('#btn-result-retry').addEventListener('click', ()=>{ show('#ui-result',false); start(state.mode); });
