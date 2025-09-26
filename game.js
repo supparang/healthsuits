@@ -1,6 +1,5 @@
 console.log('Handwash VR Game logic loaded');
 
-// ระบบ Splash → Menu
 document.addEventListener("DOMContentLoaded", () => {
   const splash = document.querySelector("#splash");
   const menu = document.querySelector("#menu");
@@ -32,11 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
   btnTutorial.addEventListener("click", () => {
     hudStatus.setAttribute("text","value: โหมดฝึก...");
     playClick();
-    // TODO: ใส่ logic โหมดฝึก
   });
 });
 
-// ฟังก์ชันนับถอยหลังก่อนเริ่มเกม
 function startCountdown() {
   const hudStatus = document.querySelector("#status");
   const sounds = [
@@ -55,7 +52,6 @@ function startCountdown() {
       setTimeout(next, 1000);
     } else {
       hudStatus.setAttribute("text","value: เล่นเกมแล้ว!");
-      // TODO: logic เกมจริง เช่น spawn เป้า
     }
   }
   next();
