@@ -1,6 +1,6 @@
-/* WebXR Health Game — Hygiene with Timer & Full Result */
+/* Hygiene New Start — robust state machine, high UI, timer + result */
 (function(){
-  const $ = (s)=>document.querySelector(s);
+  const $  = (s)=>document.querySelector(s);
   const $$ = (s)=>Array.from(document.querySelectorAll(s));
 
   const STEPS = [
@@ -17,24 +17,51 @@
   ];
 
   const state = {
-    mode: 'practice',     // 'practice' | 'game'
-    timeLeft: 60,
-    timerId: null,
+    scene: 'splash', // splash | menu | hygiene | result
+    mode: 'practice',
+    playing: false,
     step: 0,
     score: 0,
     mistakes: Array(7).fill(0),
-    playing: false
+    timeLeft: 60,
+    timerId: null
   };
 
-  function reset(){
-    state.step = 0;
-    state.score = 0;
-    state.timeLeft = 60;
-    state.mistakes = Array(7).fill(0);
-    state.playing = false;
-    spawnGrid();
-    refreshHUD();
-    updateProgress();
+  function show(id, on){
+    const el = $(id);
+    if (!el) return;
+    el.setAttribute('visible', !!on);
+    // Toggle interactive class
+    const btns = el.querySelectorAll('.clickable');
+    btns.forEach(b=>{
+      const cls = b.getAttribute('class')||'';
+      const has = cls.includes('active');
+      if (on && !has) b.setAttribute('class', cls + ' active');
+      if (!on && has) b.setAttribute('class', cls.replace(' active',''));
+    });
+    // Move hidden panels out of view & shrink
+    if (on){
+      el.setAttribute('scale','1 1 1');
+      if (el.getAttribute('data-pos')) el.setAttribute('position', el.getAttribute('data-pos'));
+    } else {
+      if (!el.getAttribute('data-pos')) el.setAttribute('data-pos', el.getAttribute('position'));
+      const p = el.getAttribute('position');
+      el.setAttribute('position', `${p.x} -999 ${p.z}`);
+      el.setAttribute('scale','0.0001 0.0001 0.0001');
+    }
+  }
+
+  function go(scene){
+    state.scene = scene;
+    show('#ui-splash', scene==='splash');
+    show('#ui-menu',   scene==='menu');
+    show('#ui-hygiene',scene==='hygiene');
+    show('#ui-result', scene==='result');
+  }
+
+  function resetGame(){
+    state.step = 0; state.score = 0; state.mistakes = Array(7).fill(0); state.timeLeft = 60;
+    spawnGrid(); refreshHUD(); updateProgress();
   }
 
   function spawnGrid(){
@@ -65,7 +92,7 @@
   }
 
   function refreshHUD(){
-    $('#hud-score').setAttribute('text', `value: คะแนน: ${state.score}; color:#e6f3ff; align:right; width:2.0`);
+    $('#hud-score').setAttribute('text', `value: คะแนน: ${state.score}; color:#e6f3ff; align:right; width:1.8`);
     $('#hud-hint').setAttribute('text', `value: ขั้นต่อไป: ${STEPS[Math.min(state.step,6)] || 'ครบแล้ว!'}; color:#cfe9ff; align:left; wrapCount:48; width:2.4`);
     $('#hud-timer').setAttribute('text', `value: เวลา: ${state.mode==='game' ? (state.timeLeft+' วิ') : '--'}; color:#ffd479; align:right; width:1.6`);
   }
@@ -74,9 +101,8 @@
     const ratio = Math.min(state.step / 7, 1);
     const totalW = 2.4, leftX = -1.2;
     const fillW = totalW * ratio;
-    const fill = $('#progress-fill');
-    fill.setAttribute('width', fillW.toFixed(3));
-    fill.setAttribute('position', `${leftX + fillW/2} 0 0.01`);
+    $('#progress-fill').setAttribute('width', fillW.toFixed(3));
+    $('#progress-fill').setAttribute('position', `${leftX + fillW/2} 0 0.01`);
   }
 
   function refreshIndicators(){
@@ -92,18 +118,16 @@
 
   function onPick(i){
     if (!state.playing) return;
-    if (i===state.step){ 
-      state.score += 2; 
-      state.step++; 
-      refreshHUD(); updateProgress(); refreshIndicators(); 
-      if (state.step>=7) endGame(); 
-    } else { 
-      state.score -= 1; 
-      // count mistake toward the correct next step (not the clicked index)
+    if (i===state.step){
+      state.score += 2; state.step++;
+      refreshHUD(); updateProgress(); refreshIndicators();
+      if (state.step>=7) endGame();
+    } else {
+      state.score -= 1;
       const target = Math.min(state.step, 6);
       state.mistakes[target] += 1;
-      flashHint('เลือกตามลำดับ (ดูวงสีเขียว)'); 
-      refreshHUD(); 
+      flashHint('เลือกตามลำดับ (ดูวงสีเขียว)');
+      refreshHUD();
     }
   }
 
@@ -115,13 +139,9 @@
 
   function start(mode){
     state.mode = mode;
-    // only hygiene visible
-    show('#ui-result', false);
-    show('#ui-splash', false);
-    show('#ui-menu', false);
-    show('#ui-hygiene', true);
-    reset();
     state.playing = true;
+    go('hygiene');
+    resetGame();
     if (state.mode==='game') startTimer();
   }
 
@@ -129,108 +149,58 @@
     stopTimer();
     state.timerId = setInterval(()=>{
       state.timeLeft--;
-      if (state.timeLeft <= 0){
-        state.timeLeft = 0;
-        refreshHUD();
-        endGame();
-      } else {
-        refreshHUD();
-      }
+      if (state.timeLeft<=0){ state.timeLeft=0; refreshHUD(); endGame(); }
+      else refreshHUD();
     }, 1000);
   }
-
-  function stopTimer(){
-    if (state.timerId){ clearInterval(state.timerId); state.timerId = null; }
-  }
+  function stopTimer(){ if (state.timerId){ clearInterval(state.timerId); state.timerId=null; } }
 
   function buildAdvice(){
-    // Steps with any mistakes or incomplete due to time -> advise
     const lines = [];
     for (let i=0;i<7;i++){
-      if (state.mistakes[i] > 0 || state.step <= i){
+      if (state.mistakes[i]>0 || state.step<=i){
         lines.push(`• ขั้นที่ ${i+1}: ${ADVICE[i]}`);
       }
     }
-    if (lines.length===0) return 'เยี่ยมมาก! คุณทำครบและถูกต้องทั้งหมด';
-    return lines.slice(0,6).join('\\n'); // cap to keep panel readable
+    return lines.length? lines.slice(0,6).join('\\n') : 'เยี่ยมมาก! คุณทำครบและถูกต้องทั้งหมด';
   }
 
   function endGame(){
     state.playing = false;
     stopTimer();
-    // Stars: 3 (>=12 pts), 2 (>=8), else 1
     const stars = state.score >= 12 ? 3 : (state.score >= 8 ? 2 : 1);
     const line1 = `คะแนนรวม: ${state.score} คะแนน`;
     const line2 = `ขั้นตอนสำเร็จ: ${Math.min(state.step,7)} / 7`;
     const line3 = state.mode==='game' ? `เวลาคงเหลือ: ${state.timeLeft} วิ` : 'โหมดฝึก (ไม่มีจับเวลา)';
     const line4 = `ระดับ: ${'★'.repeat(stars)}${'☆'.repeat(3-stars)}`;
     $('#result-lines').setAttribute('text', `value: ${line1}\\n${line2}\\n${line3}\\n${line4}; color:#cfe9ff; align:center; wrapCount:44; width:2.4`);
-    $('#result-title').setAttribute('text', 'value: สรุปผล (อนามัยส่วนบุคคล); color:#e6f3ff; align:center; width:2.6');
     $('#result-advice').setAttribute('text', `value: คำแนะนำ:\\n${buildAdvice()}; color:#a9d6ff; align:center; wrapCount:44; width:2.4`);
-    show('#ui-result', true);
-  }
-
-  function show(id, on){
-    const el = document.querySelector(id);
-    if (!el) return;
-    el.setAttribute('visible', !!on);
-    // Toggle interactive state on buttons
-    const btns = el.querySelectorAll('.clickable');
-    btns.forEach(b=>{
-      const cls = b.getAttribute('class') || '';
-      const has = cls.includes('active');
-      if (on && !has) b.setAttribute('class', cls + ' active');
-      if (!on && has) b.setAttribute('class', cls.replace(' active',''));
-    });
-    // Extra safety: move and scale when hidden
-    if (on){
-      el.setAttribute('scale', '1 1 1');
-      // restore original X,Z from data-pos if present
-      const posData = el.getAttribute('data-pos');
-      if (posData){ el.setAttribute('position', posData); }
-    } else {
-      // stash original position once
-      if (!el.getAttribute('data-pos')){
-        el.setAttribute('data-pos', el.getAttribute('position'));
-      }
-      const p = el.getAttribute('position');
-      el.setAttribute('position', `${p.x} -999 ${p.z}`);
-      el.setAttribute('scale', '0.0001 0.0001 0.0001');
-    }
+    go('result');
   }
 
   function bindUI(){
-    $('#btn-to-menu').addEventListener('click', ()=>{ show('#ui-splash',false); show('#ui-menu',true); });
-    $('#btn-hygiene').addEventListener('click', ()=>{
-      show('#ui-splash', false);
-      show('#ui-menu', false);
-      show('#ui-hygiene', true);
-      reset();
-    });
-    $('#btn-back-menu').addEventListener('click', ()=>{ show('#ui-hygiene',false); show('#ui-menu',true); stopTimer(); });
-    $('#btn-restart').addEventListener('click', ()=>{ start(state.mode); });
+    $('#btn-to-menu').addEventListener('click', ()=> go('menu'));
+    $('#btn-exit').addEventListener('click', ()=> go('splash'));
+    $('#btn-start-practice').addEventListener('click', ()=> start('practice'));
+    $('#btn-start-game').addEventListener('click', ()=> start('game'));
+    $('#btn-menu').addEventListener('click', ()=>{ stopTimer(); state.playing=false; go('menu'); });
+    $('#btn-restart').addEventListener('click', ()=> start(state.mode));
+    $('#btn-result-retry').addEventListener('click', ()=> start(state.mode));
+    $('#btn-result-menu').addEventListener('click', ()=>{ stopTimer(); go('menu'); });
+  }
 
-    // Mode buttons
-    $('#btn-start-practice').addEventListener('click', ()=> { show('#ui-menu', false); start('practice'); });
-    $('#btn-start-game').addEventListener('click', ()=> { show('#ui-menu', false); start('game'); });
-
-    // Result panel controls
-    $('#btn-result-retry').addEventListener('click', ()=>{ show('#ui-result',false); start(state.mode); });
-    $('#btn-result-menu').addEventListener('click', ()=>{ show('#ui-result',false); show('#ui-hygiene',false); show('#ui-menu',true); });
+  // Extra guard: while playing, ensure splash/menu are off
+  function tickEnforce(){
+    if (state.playing){
+      const splash = $('#ui-splash'); const menu = $('#ui-menu');
+      if (splash && splash.getAttribute('visible')) show('#ui-splash', false);
+      if (menu && menu.getAttribute('visible')) show('#ui-menu', false);
+    }
   }
 
   window.addEventListener('DOMContentLoaded', ()=>{
     bindUI();
-    show('#ui-splash',true); show('#ui-menu',false); show('#ui-hygiene',false); show('#ui-result',false);
+    go('splash');
+    setInterval(tickEnforce, 300);
   });
 })();
-  // Safety guard: enforce hidden menu/splash while playing
-  function tickEnforce(){
-    if (state.playing){
-      const m = document.querySelector('#ui-menu');
-      const s = document.querySelector('#ui-splash');
-      if (m && m.getAttribute('visible')) show('#ui-menu', false);
-      if (s && s.getAttribute('visible')) show('#ui-splash', false);
-    }
-  }
-  setInterval(tickEnforce, 300);
