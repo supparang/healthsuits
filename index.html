@@ -2,84 +2,64 @@
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <title>Health3 VR — Spatial/WebXR</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1"/>
-  <!-- A-Frame core -->
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <!-- Troika (รองรับภาษาไทย) -->
-  <script src="https://unpkg.com/troika-three-text/dist/troika-three-text.umd.js"></script>
-  <script src="https://unpkg.com/aframe-troika-text/dist/aframe-troika-text.min.js"></script>
-  <!-- Game logic -->
-  <script src="script.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000"/>
+  <title>WebXR VR Starter</title>
+  <!-- A-Frame (1.7.0) -->
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
   <style>
-    html,body { margin:0; height:100%; background:#000; touch-action: manipulation; }
-    canvas { touch-action: manipulation; }
+    html, body { margin:0; padding:0; height:100%; background:#000; }
+    /* Ensure canvas fills screen to avoid misplaced Enter VR button */
+    .a-canvas, .a-body { position: absolute; width: 100%; height: 100%; }
   </style>
 </head>
 <body>
-  <!-- เปิด fontsize-apply + ensure-cursor + tap-to-click -->
-  <a-scene renderer="antialias: true"
-           tick-timer hand-gestures ensure-cursor fontsize-apply tap-to-click>
-    <!-- กล้อง + ตัวชี้ -->
+  <a-scene renderer="antialias:true" background="color: #101018">
+    <!-- Sky / lighting -->
+    <a-sky color="#101018"></a-sky>
+    <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+    <a-entity light="type: directional; intensity: 0.6" position="0 1 1"></a-entity>
+
+    <!-- Camera with cursor (gaze/tap to click) -->
     <a-entity id="rig">
       <a-entity id="camera" camera look-controls position="0 1.6 0">
-        <!-- รีทิเคิล (ชี้กลางหน้าจอ) -->
-        <a-entity id="reticle"
-                  cursor="rayOrigin: entity; fuse: false"
-                  raycaster="objects: .clickable, [troika-text]; far: 30"
-                  geometry="primitive: ring; radiusInner: 0.003; radiusOuter: 0.006"
-                  material="color: #FFFFFF; shader: flat; opacity: 0.9"
-                  position="0 0 -1"></a-entity>
+        <a-entity cursor="fuse: true; fuseTimeout: 900"
+                  raycaster="objects: .clickable"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
+                  material="shader: flat; opacity: 0.9">
+        </a-entity>
       </a-entity>
-      <a-entity laser-controls="hand: right"></a-entity>
-      <a-entity id="handRight" hand-tracking-controls="hand: right"></a-entity>
-      <a-entity hand-tracking-controls="hand: left"></a-entity>
     </a-entity>
 
-    <!-- HUD (ย้ายไปไกลขึ้นเพื่อลดขนาดบนจอ) -->
-    <a-entity id="hudState" position="0 1.70 -1.6"
-              troika-text="value:โหมด: menu; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
-    <a-entity id="hudScore" position="0 1.52 -1.6"
-              troika-text="value:คะแนน: 0; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
-    <a-entity id="hudTime"  position="0 1.34 -1.6"
-              troika-text="value:เวลา: 0s; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
-
-    <!-- พื้นหลัง -->
-    <a-sky color="#224466"></a-sky>
-    <a-plane position="0 0 -2" rotation="-90 0 0" width="20" height="20" color="#334455"></a-plane>
-
-    <!-- เมนูหลัก (ย้ายไปไกลขึ้น) -->
-    <a-entity id="grp_menu" visible="true" position="0 1.25 -1.6">
-      <a-entity position="0 0 0"
-                troika-text="value:เลือกมินิเกม; color:#FFFFFF; anchor: center; maxWidth: 2"></a-entity>
-
-      <a-box class="clickable" position="0 -0.5 0" depth="0.08" height="0.2" width="0.9"
-             color="#06D6A0" onclick="goMode('hygiene')">
-        <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:อนามัยส่วนบุคคล; anchor: center; maxWidth: 1.6"></a-entity>
-      </a-box>
-
-      <a-box class="clickable" position="0 -1.0 0" depth="0.08" height="0.2" width="0.9"
-             color="#FFD166" onclick="goMode('nutrition')">
-        <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:โภชนาการ; anchor: center; maxWidth: 1.6"></a-entity>
-      </a-box>
-
-      <a-box class="clickable" position="0 -1.5 0" depth="0.08" height="0.2" width="0.9"
-             color="#4CC9F0" onclick="goMode('exercise')">
-        <a-entity class="clickable" position="0 0 0.06"
-                  troika-text="value:การออกกำลังกาย; anchor: center; maxWidth: 1.6"></a-entity>
-      </a-box>
+    <!-- HUD -->
+    <a-entity id="hud" position="0 1.6 -1.2">
+      <a-entity id="title" text="value: เกมล่าจุดสุขภาพ (VR); width: 1.8; align: center; color: #fff"></a-entity>
+      <a-entity id="status" position="0 -0.12 0"
+        text="value: แตะปุ่ม 'เริ่มเกม'; width: 1.8; align: center; color: #9cf"></a-entity>
+      <a-entity id="score" position="0 -0.24 0"
+        text="value: คะแนน: 0 | เวลา: 30s; width: 1.8; align: center; color: #fff"></a-entity>
     </a-entity>
 
-    <!-- ฉากย่อย -->
-    <a-entity id="grp_hygiene" visible="false"></a-entity>
-    <a-entity id="grp_nutrition" visible="false"></a-entity>
-    <a-entity id="grp_exercise" visible="false"></a-entity>
+    <!-- Start button -->
+    <a-entity id="startBtn" class="clickable" position="0 1.2 -2"
+              geometry="primitive: plane; width: 0.6; height: 0.22"
+              material="color: #2e7d32; opacity: 0.95"
+              event-set__enter="_event: mouseenter; material.color: #43a047"
+              event-set__leave="_event: mouseleave; material.color: #2e7d32">
+      <a-entity position="0 0 0.01"
+        text="value: เริ่มเกม; width: 1.2; align: center; color: #fff"></a-entity>
+    </a-entity>
 
-    <!-- แสง -->
-    <a-entity light="type: ambient; intensity: 0.7"></a-entity>
-    <a-entity light="type: directional; intensity: 0.6" position="1 3 2"></a-entity>
+    <!-- Target container -->
+    <a-entity id="targets"></a-entity>
+
+    <!-- Ground reference -->
+    <a-entity geometry="primitive: circle; radius: 6" rotation="-90 0 0"
+              material="color:#151525; metalness:0.2; roughness:0.9; opacity:0.8"></a-entity>
+
+    <!-- Game scripts -->
+    <script src="app.js"></script>
   </a-scene>
 </body>
 </html>
