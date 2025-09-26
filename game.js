@@ -188,6 +188,11 @@ function loop(){
   if (APP.state!=='playing') return;
 
   const t = getSongTime();
+  // Wait until audio is actually playing to sync spawn timing
+  if (!APP.audio || APP.audio.paused || t <= 0.05){
+    updateHUD();
+    return requestAnimationFrame(loop);
+  }
   // spawn notes slightly before their hit time based on speed and distance
   APP.notes.forEach(n => {
     if (!n.spawned && !n.hit && !n.miss){
