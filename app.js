@@ -115,12 +115,11 @@
 
   function start(mode){
     state.mode = mode;
-    // Always ensure only hygiene panel is visible
+    // only hygiene visible
+    show('#ui-result', false);
     show('#ui-splash', false);
     show('#ui-menu', false);
     show('#ui-hygiene', true);
-    show('#ui-result', false);
-
     reset();
     state.playing = true;
     if (state.mode==='game') startTimer();
@@ -171,7 +170,34 @@
     show('#ui-result', true);
   }
 
-  function show(id, on){ $(id).setAttribute('visible', !!on); }
+  function show(id, on){
+    const el = document.querySelector(id);
+    if (!el) return;
+    el.setAttribute('visible', !!on);
+    // Toggle interactive state on buttons
+    const btns = el.querySelectorAll('.clickable');
+    btns.forEach(b=>{
+      const cls = b.getAttribute('class') || '';
+      const has = cls.includes('active');
+      if (on && !has) b.setAttribute('class', cls + ' active');
+      if (!on && has) b.setAttribute('class', cls.replace(' active',''));
+    });
+    // Extra safety: move and scale when hidden
+    if (on){
+      el.setAttribute('scale', '1 1 1');
+      // restore original X,Z from data-pos if present
+      const posData = el.getAttribute('data-pos');
+      if (posData){ el.setAttribute('position', posData); }
+    } else {
+      // stash original position once
+      if (!el.getAttribute('data-pos')){
+        el.setAttribute('data-pos', el.getAttribute('position'));
+      }
+      const p = el.getAttribute('position');
+      el.setAttribute('position', `${p.x} -999 ${p.z}`);
+      el.setAttribute('scale', '0.0001 0.0001 0.0001');
+    }
+  }
 
   function bindUI(){
     $('#btn-to-menu').addEventListener('click', ()=>{ show('#ui-splash',false); show('#ui-menu',true); });
@@ -198,3 +224,13 @@
     show('#ui-splash',true); show('#ui-menu',false); show('#ui-hygiene',false); show('#ui-result',false);
   });
 })();
+  // Safety guard: enforce hidden menu/splash while playing
+  function tickEnforce(){
+    if (state.playing){
+      const m = document.querySelector('#ui-menu');
+      const s = document.querySelector('#ui-splash');
+      if (m && m.getAttribute('visible')) show('#ui-menu', false);
+      if (s && s.getAttribute('visible')) show('#ui-splash', false);
+    }
+  }
+  setInterval(tickEnforce, 300);
