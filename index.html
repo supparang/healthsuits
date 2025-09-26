@@ -9,7 +9,6 @@
 <body>
 <a-scene>
   <a-assets>
-    <!-- เสียง -->
     <audio id="sfx-b3" src="assets/beep3.wav"></audio>
     <audio id="sfx-b2" src="assets/beep2.wav"></audio>
     <audio id="sfx-b1" src="assets/beep1.wav"></audio>
@@ -19,7 +18,6 @@
     <audio id="sfx-wrong" src="assets/wrong.wav"></audio>
     <audio id="ui-click" src="assets/ui_click.wav"></audio>
 
-    <!-- การ์ตูนมือ -->
     <img id="guide-palm" src="assets/hand_palm.svg">
     <img id="guide-back" src="assets/hand_back.svg">
     <img id="guide-between" src="assets/hand_between.svg">
@@ -30,22 +28,19 @@
     <img id="splash-art" src="assets/splash.svg">
   </a-assets>
 
-  <!-- กล้อง + เคอร์เซอร์ -->
   <a-entity camera look-controls position="0 1.6 0">
-    <a-entity cursor="fuse:true; fuseTimeout:800" 
+    <a-entity cursor="fuse:true; fuseTimeout:800"
               geometry="primitive:ring; radiusInner:0.01; radiusOuter:0.015"
               position="0 0 -1"
               material="color:#fff; shader:flat"></a-entity>
   </a-entity>
 
-  <!-- HUD -->
   <a-entity id="hud" position="0 2.0 -1.5">
     <a-entity id="title" text="value: เกมล้างมือ VR; width:1.8; align:center; color:#fff"></a-entity>
     <a-entity id="status" position="0 -0.2 0" text="value: แตะเพื่อเข้าสู่เมนู; width:1.5; align:center; color:#9cf"></a-entity>
     <a-entity id="score" position="0 -0.4 0" text="value: คะแนน:0 | ขั้น:0/7 | เวลา:00s; width:1.5; align:center; color:#fff"></a-entity>
   </a-entity>
 
-  <!-- Splash -->
   <a-entity id="splash" position="0 1.4 -1.6">
     <a-plane width="1.6" height="1.2" color="#222"></a-plane>
     <a-entity position="0 0.4 0.01" text="value: Handwash VR; width:1.4; align:center; color:#fff"></a-entity>
@@ -55,7 +50,6 @@
     </a-entity>
   </a-entity>
 
-  <!-- เมนูหลัก -->
   <a-entity id="menu" visible="false" position="0 1.2 -2">
     <a-entity id="btnStart" class="clickable" position="0 0.2 0"
       geometry="primitive: plane; width:1; height:0.3" material="color:#22c55e">
@@ -67,7 +61,6 @@
     </a-entity>
   </a-entity>
 
-  <!-- เวิลด์เกม -->
   <a-entity id="world"></a-entity>
 
   <script src="game.js"></script>
