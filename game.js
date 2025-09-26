@@ -1,4 +1,4 @@
-// Handwash VR – full gameplay logic
+// Handwash VR – full gameplay with on-screen instructions
 (function(){
   const STEPS = [
     {key:'palm',   label:'1) ฝ่ามือ',        color:'#00e676', guide:'#guide-palm'},
@@ -43,8 +43,17 @@
         this.play(this.sfx.click);
         document.querySelector('#splash').setAttribute('visible', false);
         document.querySelector('#menu').setAttribute('visible', true);
-        this.updateHud('อยู่ที่หน้าเมนู');
+        this.updateHud('เลือกโหมด: เริ่มเกม (จับเวลา) หรือ โหมดฝึก (ไม่มีเวลา)');
       });
+
+      // Help overlay
+      const btnHow = document.querySelector('#btnHow');
+      const howOverlay = document.querySelector('#howOverlay');
+      const btnCloseHow = document.querySelector('#btnCloseHow');
+      if (btnHow && howOverlay && btnCloseHow){
+        btnHow.addEventListener('click', ()=>{ this.play(this.sfx.click); howOverlay.setAttribute('visible', true); });
+        btnCloseHow.addEventListener('click', ()=>{ this.play(this.sfx.click); howOverlay.setAttribute('visible', false); });
+      }
 
       // Menu bindings
       document.querySelector('#btnStart').addEventListener('click', ()=>{
@@ -82,7 +91,7 @@
       this.state='tutorial';
       document.querySelector('#menu').setAttribute('visible', false);
       this.resetCommon();
-      this.updateHud('โหมดฝึก: ทำตามลำดับ 1–7 (ไม่มีจับเวลา)');
+      this.updateHud('โหมดฝึก: แตะเป้าที่ถูกต้องตามลำดับ 1 → 7 (ไม่มีจับเวลา)');
       this.spawnStep(STEPS[this.stepIdx], true);
     },
 
@@ -92,10 +101,10 @@
       document.querySelector('#menu').setAttribute('visible', false);
       this.resetCommon();
       let t=0;
-      this.updateHud('เตรียมพร้อม...');
-      setTimeout(()=>{ this.updateHud('3'); this.play(this.sfx.b3); }, t+=300);
-      setTimeout(()=>{ this.updateHud('2'); this.play(this.sfx.b2); }, t+=1000);
-      setTimeout(()=>{ this.updateHud('1'); this.play(this.sfx.b1); }, t+=1000);
+      this.updateHud('นับถอยหลัง: 3 → 2 → 1 → เริ่ม!');
+      setTimeout(()=>{ this.updateHud('3 — เตรียมพร้อม'); this.play(this.sfx.b3); }, t+=300);
+      setTimeout(()=>{ this.updateHud('2 — เล็งเป้าให้ดี'); this.play(this.sfx.b2); }, t+=1000);
+      setTimeout(()=>{ this.updateHud('1 — จะเริ่มแล้ว'); this.play(this.sfx.b1); }, t+=1000);
       setTimeout(()=>{
         this.updateHud('เริ่ม! แตะเป้าตามลำดับ 1–7');
         this.play(this.sfx.bgo);
@@ -107,7 +116,7 @@
       // timer
       this.timerId = setInterval(()=>{
         this.timeLeft -= 1;
-        if (this.timeLeft<=5 && this.timeLeft>0){ this.play(this.sfx.warn); }
+        if (this.timeLeft<=5 && this.timeLeft>0){ this.play(this.sfx.warn); this.updateHud(`เหลือเวลา ${this.timeLeft}s — เร็วขึ้น!`); }
         this.updateScore();
         if (this.timeLeft<=0){ this.end(false); }
       }, 1000);
@@ -119,9 +128,9 @@
       clearInterval(this.timerId);
       this.updateHud(isWin? `ยอดเยี่ยม! ผ่านครบ 7 ขั้นตอน ได้ ${this.score} คะแนน` : `หมดเวลา! คะแนน ${this.score}`);
       this.clearWorld();
-      // Return to menu after 2s
       setTimeout(()=>{
         document.querySelector('#menu').setAttribute('visible', true);
+        this.updateHud('เลือกโหมดเพื่อเล่นอีกครั้ง');
       }, 2000);
     },
 
@@ -143,7 +152,6 @@
       label.setAttribute('position','0 0.22 0.01');
       label.setAttribute('text',`value:${step.label}; width: 1.0; align: center; color: #fff`);
 
-      // Big guide panel
       const guide = document.createElement('a-entity');
       guide.setAttribute('geometry','primitive: plane; width: 0.72; height: 0.54');
       guide.setAttribute('material',`shader: flat; src: ${step.guide}`);
@@ -160,7 +168,6 @@
         this.score += 10;
         this.updateScore();
         this.play(this.sfx.correct);
-        // quick hit animation
         target.setAttribute('material','color:#ffd54f; emissive:#8d6e63');
         target.setAttribute('animation__hit','property: scale; to: 0.05 0.05 0.05; dur: 120; easing: easeInCubic');
         setTimeout(()=>{
@@ -168,15 +175,16 @@
           if (this.stepIdx>=STEPS.length){
             this.end(true);
           } else {
+            this.updateHud(`ดีมาก! ต่อไป: ${STEPS[this.stepIdx].label}`);
             this.spawnStep(STEPS[this.stepIdx], tutorial);
           }
         }, 140);
       });
 
       if (!tutorial){
-        // Add distractors
+        // distractors
         this.pickDistractors(step.key, 2).forEach(k=> this.spawnDistractor(k));
-        // Motion for extra challenge
+        // motion
         const mover = document.createElement('a-animation');
         mover.setAttribute('attribute','position');
         mover.setAttribute('to', `${pos.x+0.2} ${pos.y} ${pos.z}`);
@@ -206,6 +214,7 @@
         if (this.state==='game'){ this.timeLeft = Math.max(0, this.timeLeft - 3); }
         this.updateScore();
         this.play(this.sfx.wrong);
+        this.updateHud('ยังไม่ใช่ขั้นนี้! ลองดูภาพตัวอย่างด้านข้าง');
         wrong.setAttribute('material','color:#ef5350; emissive:#7f0000');
         wrong.setAttribute('animation__hit','property: scale; to: 0.03 0.03 0.03; dur: 100; easing: easeInCubic');
         setTimeout(()=> wrong.remove(), 120);
@@ -214,7 +223,6 @@
       this.world.appendChild(wrong);
     },
 
-    // Helpers
     labelFor(key){
       const m = {palm:'1) ฝ่ามือ', back:'2) หลังมือ', between:'3) ง่ามนิ้ว', knuckle:'4) หลังนิ้ว', tips:'5) ปลายนิ้ว/เล็บ', thumb:'6) โป้ง', wrist:'7) ข้อมือ'};
       return m[key] || key;
