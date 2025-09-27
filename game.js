@@ -1,271 +1,241 @@
-// V2 English: polished neon UI, colored arrows/glow, particles, sfx, stars, hand-tracking, safe gaze.
-const JUDGE = { perfect: 0.14, good: 0.28 };
-const SPEED = 1.05;
-const NOTE_START_Z = -1.8;
-const HIT_Z = 0.0;
-const SONG_OFFSET = 0.25;
+// Fitness Adventure VR — split into game.js
+const APP = {
+  running: false,
+  timeLeft: 60,
+  score: 0,
+  combo: 0,
+  perfectWindow: 0.25,
+  goodWindow: 0.5,
+  speed: 2.2,
+  track: [],
+  nextIdx: 0,
+  lastTick: 0
+};
 
-function buildBeatmap(bpm=102){
-  const secPerBeat = 60 / bpm;
-  const dirs = ['up','left','right','down'];
-  const map = [];
-  let t = SONG_OFFSET;
-  for (let i=0;i<72;i++){
-    map.push({time: t, dir: dirs[i%4]});
-    if (i%8===4) map.push({time: t + secPerBeat*0.5, dir: dirs[(i+2)%4]});
-    if (i%16===8) map.push({time: t + secPerBeat*0.25, dir: dirs[(i+1)%4]});
-    t += secPerBeat;
+const hud = {
+  root: document.getElementById('hud'),
+  time: document.getElementById('hudTime'),
+  score: document.getElementById('hudScore'),
+  combo: document.getElementById('hudCombo'),
+};
+
+const ui = {
+  start: document.getElementById('btnStart'),
+  how: document.getElementById('btnHow'),
+};
+
+function buildTrack(){
+  const track = [];
+  let t = 2.0;
+  while(t < 58){
+    const r = Math.random();
+    if (r < 0.4){ track.push({ t, type: (Math.random()<0.5?'punchL':'punchR') }); t += 1.7; }
+    else if (r < 0.7){ track.push({ t, type: 'duck' }); t += 2.0; }
+    else { track.push({ t, type: 'handsUp' }); t += 1.8; }
   }
-  return map;
+  return track;
 }
-const BEATMAP = buildBeatmap(102);
 
-function spawnPopup(text, color, atPos){
-  const root = APP.arena || document.querySelector('a-scene');
+function resetGame(){
+  APP.running = false;
+  APP.timeLeft = 60;
+  APP.score = 0; APP.combo = 0; APP.nextIdx = 0; APP.lastTick = 0;
+  APP.track = buildTrack();
+  hud.time.textContent = APP.timeLeft; hud.score.textContent = APP.score; hud.combo.textContent = APP.combo;
+  document.getElementById('summaryPanel').setAttribute('visible', false);
+  document.getElementById('titleBoard').setAttribute('visible', true);
+}
+
+function startGame(){
+  resetGame();
+  APP.running = true;
+  hud.root.hidden = false;
+  document.getElementById('titleBoard').setAttribute('visible', false);
+  const bgm = document.getElementById('bgm');
+  if (bgm) { bgm.currentTime = 0; bgm.play().catch(()=>{}); }
+}
+
+const world = document.getElementById('world');
+const pools = { targets: [], hurdles: [], cues: [] };
+
+function spawnTarget(side){
+  const x = side==='L'?-0.45:0.45; const y = 1.3; const z = -10;
   const e = document.createElement('a-entity');
-  const x = atPos?.x ?? 0, y = (atPos?.y ?? 1.6) + 0.14, z = (APP.arena ? 0 : -1.6);
+  e.setAttribute('geometry', 'primitive: circle; radius: 0.22');
+  e.setAttribute('material', 'color: #28c76f; emissive: #28c76f; emissiveIntensity: 0.5');
   e.setAttribute('position', `${x} ${y} ${z}`);
-  e.innerHTML = `<a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="${text}" color="${color}" width="0.9" align="center"></a-text>`;
-  root.appendChild(e);
-  e.setAttribute('animation__move', 'property: position; to: ' + x + ' ' + (y+0.22) + ' ' + z + '; dur: 520; easing: easeOutQuad');
-  e.setAttribute('animation__fade', 'property: components.text.material.opacity; to: 0; dur: 520; delay: 80; easing: linear');
-  setTimeout(()=>{ e.remove(); }, 640);
+  e.classList.add('target');
+  const ring = document.createElement('a-ring');
+  ring.setAttribute('radius-inner','0.22');
+  ring.setAttribute('radius-outer','0.28');
+  ring.setAttribute('color','#b7f5d6');
+  e.appendChild(ring);
+  world.appendChild(e);
+  pools.targets.push({el:e, active:true, tHit: performance.now()/1000 + 10/APP.speed});
 }
 
-function computeStars(stats){
-  const total = Math.max(1, stats.total);
-  const acc = (stats.perfect + stats.good) / total * 100;
-  if (acc >= 90) return 3;
-  if (acc >= 70) return 2;
-  return 1;
-}
-function starString(n){ return '★'.repeat(n) + '☆'.repeat(3-n); }
-
-function worldPos(el){
-  if (!el || !el.object3D) return {x:0,y:0,z:0};
-  const v = new THREE.Vector3(); el.object3D.getWorldPosition(v);
-  return {x:v.x,y:v.y,z:v.z};
+function spawnHurdle(){
+  const e = document.createElement('a-box');
+  e.setAttribute('width','1.2'); e.setAttribute('height','0.6'); e.setAttribute('depth','0.4');
+  e.setAttribute('color', '#ff6b6b');
+  e.setAttribute('position', `0 0.6 -12`);
+  e.classList.add('hurdle');
+  world.appendChild(e);
+  pools.hurdles.push({el:e, active:true, tHit: performance.now()/1000 + 12/APP.speed});
 }
 
-function burst(x,y,z,color='#fff'){
-  const root = APP.arena || document.querySelector('a-scene');
-  for (let i=0;i<8;i++){
-    const p = document.createElement('a-entity');
-    p.setAttribute('position', `${x} ${y} ${z}`);
-    p.innerHTML = `<a-sphere radius="0.01" color="${color}" material="opacity:0.9; metalness:0.2; roughness:0.1; depthTest:false"></a-sphere>`;
-    root.appendChild(p);
-    const dx = (Math.random()*2-1)*0.2;
-    const dy = (Math.random()*2-1)*0.2 + 0.06;
-    const dz = (Math.random()*2-1)*0.05;
-    p.setAttribute('animation__move', `property: position; to: ${x+dx} ${y+dy} ${z+dz}; dur: 380; easing: easeOutQuad`);
-    p.setAttribute('animation__fade', `property: components.sphere.material.opacity; to: 0; dur: 380; easing: linear`);
-    setTimeout(()=>{ p.remove(); }, 400);
+function spawnHandsUpCue(){
+  const e = document.createElement('a-entity');
+  e.setAttribute('position', `0 1.6 -11`);
+  const arrow = document.createElement('a-triangle');
+  arrow.setAttribute('color', '#ffd166');
+  arrow.setAttribute('vertex-a','0 0.6 0');
+  arrow.setAttribute('vertex-b','-0.6 -0.4 0');
+  arrow.setAttribute('vertex-c','0.6 -0.4 0');
+  e.appendChild(arrow);
+  const outline = document.createElement('a-triangle');
+  outline.setAttribute('color', '#fff'); outline.setAttribute('opacity','0.6');
+  outline.setAttribute('vertex-a','0 0.7 0'); outline.setAttribute('vertex-b','-0.7 -0.5 0'); outline.setAttribute('vertex-c','0.7 -0.5 0');
+  e.appendChild(outline);
+  world.appendChild(e);
+  pools.cues.push({el:e, active:true, tHit: performance.now()/1000 + 11/APP.speed});
+}
+
+function feedback(text, color){
+  const tpl = document.getElementById('fxTemplate');
+  const fx = tpl.cloneNode(true);
+  fx.id = '';
+  fx.setAttribute('visible', true);
+  fx.setAttribute('position', `0 2 -1.2`);
+  fx.querySelector('#fxText').setAttribute('text', `value: ${text}; align:center; color: ${color}; width: 3`);
+  world.appendChild(fx);
+  const start = performance.now();
+  function anim(){
+    const dt = (performance.now()-start)/1000;
+    if (dt<0.7){ fx.object3D.position.y = 2 + dt*0.6; fx.object3D.children[0].material.opacity = 1 - dt/0.7; requestAnimationFrame(anim); }
+    else { world.removeChild(fx); }
   }
+  requestAnimationFrame(anim);
 }
 
-window.APP = { state:"splash", mode:"game", timer:60, score:0, combo:0, maxCombo:0,
-  perfectCount:0, goodCount:0, missCount:0, notes:[], activeArrows:[], audio:null, arena:null };
+function addScore(kind){
+  let delta=0; let color="#fff";
+  if (kind==='perfect'){ delta=300; color="#7CFC00"; APP.combo++; }
+  else if (kind==='good'){ delta=120; color="#A7F3D0"; APP.combo=0; }
+  else { delta=0; color="#ffb3b3"; APP.combo=0; }
+  APP.score += delta + Math.floor(APP.combo*5);
+  hud.score.textContent = APP.score; hud.combo.textContent = APP.combo;
+  feedback(kind.toUpperCase(), color);
+  const id = kind==='perfect'?'sfxPerfect':(kind==='good'?'sfxGood':'sfxMiss');
+  const el = document.getElementById(id); if (el){ el.currentTime=0; el.play().catch(()=>{}); }
+}
 
-AFRAME.registerComponent('click-bindings', {
-  init: function () {
-    const $ = sel => document.querySelector(sel);
-    const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
-    on('#btn-continue', () => showMenu());
-    on('#btn-play', () => startGame('game'));
-    on('#btn-practice', () => startGame('practice'));
-    on('#btn-howto', () => showHowto());
-    on('#btn-back-menu', () => showMenu());
-    ['up','down','left','right'].forEach(dir => {
-      const id = '#lane-' + dir;
-      const el = $(id);
-      el.addEventListener('click', () => tryHit(dir));
-      el.addEventListener('mouseenter', () => el.setAttribute('scale','1.06 1.06 1'));
-      el.addEventListener('mouseleave', () => el.setAttribute('scale','1 1 1'));
-    });
+function endGame(){
+  APP.running=false;
+  hud.root.hidden = true;
+  const bgm = document.getElementById('bgm'); if (bgm) bgm.pause();
+  [...world.children].forEach(c=>world.removeChild(c));
+  const s = document.getElementById('summaryPanel');
+  const stars = APP.score>3200? '★★★' : (APP.score>1800? '★★☆' : '★☆☆');
+  s.querySelector('#sumStars').setAttribute('text', `value: ${stars}; align:center; color:#FFD166; width: 2`);
+  s.querySelector('#sumStats').setAttribute('text', `value: Score: ${APP.score} | Time: 60s; align:center; color:#CFE8FF; width:2`);
+  s.setAttribute('visible', true);
+  document.getElementById('titleBoard').setAttribute('visible', true);
+}
+
+function tick(t){
+  if (!APP.running){ APP.lastTick=t; return; }
+  if (!APP.lastTick) APP.lastTick=t; const dt=(t-APP.lastTick)/1000; APP.lastTick=t;
+  APP.timeLeft -= dt; if (APP.timeLeft<=0){ APP.timeLeft=0; endGame(); }
+  hud.time.textContent = Math.ceil(APP.timeLeft);
+  const nowSec = 60-APP.timeLeft;
+  while(APP.nextIdx < APP.track.length && APP.track[APP.nextIdx].t <= nowSec+2.0){
+    const evt = APP.track[APP.nextIdx++];
+    if (evt.type==='punchL') spawnTarget('L');
+    else if (evt.type==='punchR') spawnTarget('R');
+    else if (evt.type==='duck') spawnHurdle();
+    else if (evt.type==='handsUp') spawnHandsUpCue();
   }
-});
-
-function $(sel){ return document.querySelector(sel); }
-function setVisible(id, v){ const el=$(id); if (el) el.setAttribute('visible', v); }
-
-function setMenuClickables(enabled){
-  const ids = ['#btn-play','#btn-practice','#btn-howto','#btn-back-menu'];
-  ids.forEach(id => {
-    const el = document.querySelector(id);
-    if (!el) return;
-    const cls = el.getAttribute('class') || '';
-    const has = cls.split(' ').includes('clickable');
-    if (enabled && !has) el.setAttribute('class', (cls + ' clickable').trim());
-    if (!enabled && has) el.setAttribute('class', cls.split(' ').filter(c=>c!=='clickable').join(' '));
+  const dz = APP.speed * dt;
+  [...world.children].forEach(el=>{ el.object3D.position.z += dz; });
+  handlePunches();
+  handleDuck();
+  handleHandsUp();
+  pools.targets = pools.targets.filter(o=>{
+    const z=o.el.object3D.position.z; if (z>0){
+      if (o.active){ addScore('miss'); o.active=false; }
+      world.removeChild(o.el); return false;
+    } return true;
   });
-}
-
-function showMenu(){ APP.state='menu';
-  setVisible('#ui-splash', false); setVisible('#ui-howto', false);
-  setVisible('#arena', false); setVisible('#hud', false);
-  setVisible('#ui-menu', true); setMenuClickables(true); stopAudio(); }
-
-function showHowto(){ APP.state='howto';
-  setVisible('#ui-menu', false); setVisible('#ui-howto', true); setMenuClickables(true); }
-
-function updateHUD(){
-  const tl = $('#hud-left'), tm = $('#hud-mid'), tr = $('#hud-right');
-  tl.setAttribute('value', APP.mode==='game' ? `Time: ${Math.max(0, Math.ceil(APP.timer))}` : `Practice`);
-  tm.setAttribute('value', `Combo: ${APP.combo}`);
-  tr.setAttribute('value', `Score: ${APP.score}`);
-}
-
-function startGame(mode){
-  setMenuClickables(false);
-  APP.mode = mode; APP.state = 'playing';
-  APP.timer = (mode==='game') ? 60 : 0;
-  APP.score = 0; APP.combo = 0; APP.maxCombo = 0;
-  APP.perfectCount = 0; APP.goodCount = 0; APP.missCount = 0;
-  APP.notes = BEATMAP.map(n => ({...n, hit:false, miss:false, spawned:false, el:null, outlineEl:null}));
-  APP.activeArrows = []; APP.arena = $('#arena');
-  setVisible('#ui-menu', false); setVisible('#ui-howto', false);
-  setVisible('#arena', true); setVisible('#hud', true);
-  updateHUD(); startAudio(); requestAnimationFrame(loop);
-}
-
-function finishGame(){
-  APP.state='finished'; stopAudio();
-  const totalNotes = APP.notes.filter(n => n.spawned || n.hit || n.miss).length || APP.notes.length;
-  const stats = {perfect: APP.perfectCount, good: APP.goodCount, miss: APP.missCount, total: totalNotes};
-  const stars = computeStars(stats);
-  const acc = Math.round((stats.perfect + stats.good) / Math.max(1, stats.total) * 100);
-  const overlay = document.createElement('a-entity');
-  overlay.setAttribute('position','0 1.6 -1.45');
-  overlay.innerHTML = `
-    <a-plane width="2.4" height="1.4" color="#0b1226" material="opacity:0.92; depthTest:false; transparent:true"></a-plane>
-    <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="Results" color="#e5e7eb" width="2.0" align="center" position="0 0.46 0.03"></a-text>
-    <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="Score: ${APP.score}   Max Combo: ${APP.maxCombo}" color="#cbd5e1" width="1.9" align="center" position="0 0.2 0.03"></a-text>
-    <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="Accuracy: ${acc}%   Perfect: ${APP.perfectCount}   Good: ${APP.goodCount}   Miss: ${APP.missCount}" color="#cbd5e1" width="2.0" align="center" position="0 -0.02 0.03"></a-text>
-    <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="${starString(stars)}" color="#ffd166" width="1.2" align="center" position="0 -0.28 0.03"></a-text>
-    <a-plane id="btn-retry" class="clickable" width="1.4" height="0.26" color="#60a5fa" position="0 -0.54 0" material="depthTest:false; transparent:true">
-      <a-text shader="msdf" negate="false" material="depthTest:false; transparent:true" value="Back to Menu" align="center" color="#032d4a" width="1.0" position="0 0 0.03"></a-text>
-    </a-plane>`;
-  document.querySelector('a-scene').appendChild(overlay);
-  overlay.querySelector('#btn-retry').addEventListener('click', () => { overlay.remove(); showMenu(); });
-}
-
-function getSongTime(){ return APP.audio ? APP.audio.currentTime : 0; }
-function startAudio(){ const el = document.getElementById('bgm'); APP.audio = el; try{ el.currentTime=0; }catch(e){} el.play().catch(()=>{}); }
-function stopAudio(){ if (APP.audio){ try{ APP.audio.pause(); }catch(e){} } }
-
-function spawnNote(note){
-  const root = document.querySelector('#spawn-root');
-  const imgId = note.dir==='up'?'#arrowUpImg': note.dir==='down'?'#arrowDownImg': note.dir==='left'?'#arrowLeftImg':'#arrowRightImg';
-  const outlineId = note.dir==='up'?'#arrowUpOutlineImg': note.dir==='down'?'#arrowDownOutlineImg': note.dir==='left'?'#arrowLeftOutlineImg':'#arrowRightOutlineImg';
-  const pos = dirToLaneXY(note.dir);
-  const out = document.createElement('a-image');
-  out.setAttribute('src', outlineId);
-  out.setAttribute('position', `${pos.x} ${pos.y} ${NOTE_START_Z - 0.006}`);
-  out.setAttribute('width', '0.52'); out.setAttribute('height', '0.52');
-  out.setAttribute('material', 'transparent:true; opacity:0.95; depthTest:false');
-  root.appendChild(out);
-  const el = document.createElement('a-image');
-  el.setAttribute('src', imgId);
-  el.setAttribute('position', `${pos.x} ${pos.y} ${NOTE_START_Z}`);
-  el.setAttribute('width', '0.42'); el.setAttribute('height', '0.42');
-  el.setAttribute('material', 'transparent:true;opacity:1; depthTest:false');
-  root.appendChild(el);
-  note.el = el; note.outlineEl = out; APP.activeArrows.push(note);
-}
-
-function dirToLaneXY(dir){
-  switch(dir){
-    case 'up': return {x:0, y:0.62};
-    case 'left': return {x:-0.9, y:0.2};
-    case 'right': return {x:0.9, y:0.2};
-    case 'down': return {x:0, y:-0.22};
-  } return {x:0,y:0};
-}
-
-function loop(){
-  if (APP.state!=='playing') return;
-  const t = getSongTime();
-  if (!APP.audio || APP.audio.paused || t <= 0.05){ updateHUD(); return requestAnimationFrame(loop); }
-  APP.notes.forEach(n => {
-    if (!n.spawned && !n.hit && !n.miss){
-      const travel = Math.abs(NOTE_START_Z - HIT_Z) / SPEED;
-      if (t >= n.time - travel){ spawnNote(n); n.spawned = true; }
-    }
-  });
-  const dt = 1/60, toRemove = [];
-  APP.activeArrows.forEach(n => {
-    if (!n.el){ toRemove.push(n); return; }
-    const pos = n.el.getAttribute('position');
-    const z = pos.z + SPEED * dt;
-    n.el.setAttribute('position', `${pos.x} ${pos.y} ${z}`);
-    if (n.outlineEl) n.outlineEl.setAttribute('position', `${pos.x} ${pos.y} ${z-0.006}`);
-    if (z >= HIT_Z + 0.08){
-      const delta = t - n.time;
-      if (!n.hit && Math.abs(delta) > JUDGE.good){
-        n.miss = true; if (n.el) n.el.remove(); if (n.outlineEl) n.outlineEl.remove();
-        toRemove.push(n); applyJudge('miss', n.dir);
+  pools.hurdles = pools.hurdles.filter(o=>{
+    const z=o.el.object3D.position.z; if (z>0){
+      if (o.active){
+        const cam = document.getElementById('camera');
+        const y = cam.object3D.position.y + document.getElementById('rig').object3D.position.y;
+        if (y>1.1) addScore('miss'); else addScore('good');
+        o.active=false;
       }
+      world.removeChild(o.el); return false;
+    } return true;
+  });
+  pools.cues = pools.cues.filter(o=>{
+    const z=o.el.object3D.position.z; if (z>0){
+      if (o.active){ const ok = areHandsUp(); addScore(ok? 'perfect' : 'miss'); o.active=false; }
+      world.removeChild(o.el); return false;
+    } return true;
+  });
+  requestAnimationFrame(tick);
+}
+
+function getHandPositions(){
+  const left = document.getElementById('leftHand').object3D.getWorldPosition(new THREE.Vector3());
+  const right = document.getElementById('rightHand').object3D.getWorldPosition(new THREE.Vector3());
+  return { left, right };
+}
+
+function handlePunches(){
+  const { left, right } = getHandPositions();
+  const now = performance.now()/1000;
+  pools.targets.forEach(o=>{
+    if (!o.active) return;
+    const p = o.el.object3D.getWorldPosition(new THREE.Vector3());
+    const dL = p.distanceTo(left); const dR = p.distanceTo(right);
+    const d = Math.min(dL, dR);
+    if (p.z>-0.2 && p.z<0.2 && d<0.25){
+      const off = Math.abs(now - o.tHit);
+      addScore(off < APP.perfectWindow ? 'perfect' : (off < APP.goodWindow ? 'good' : 'good'));
+      o.active=false; world.removeChild(o.el);
     }
   });
-  APP.activeArrows = APP.activeArrows.filter(n => !toRemove.includes(n));
-  if (APP.mode==='game'){ APP.timer -= dt; if (APP.timer <= 0){ APP.timer = 0; updateHUD(); return finishGame(); } }
-  updateHUD(); requestAnimationFrame(loop);
 }
 
-function nearestNoteForDir(dir){
-  const t = getSongTime(); let best=null, bestAbs=999;
-  APP.notes.forEach(n => {
-    if (n.dir!==dir || n.hit || n.miss) return;
-    const d = Math.abs(n.time - t);
-    if (!n.spawned && d > 0.8) return;
-    if (d < bestAbs){ bestAbs = d; best = n; }
-  }); return best;
+function handleDuck(){ /* logic in cull when hurdle passes */ }
+
+function areHandsUp(){
+  const { left, right } = getHandPositions();
+  return (left.y>2.0 && right.y>2.0);
 }
 
-function tryHit(dir){
-  if (APP.state!=='playing') return;
-  const note = nearestNoteForDir(dir);
-  if (!note) { applyJudge('miss', dir); return; }
-  const delta = Math.abs(getSongTime() - note.time);
-  let result = 'miss';
-  if (delta <= JUDGE.perfect) result = 'perfect';
-  else if (delta <= JUDGE.good) result = 'good';
-  if (result === 'miss'){ applyJudge('miss', dir); return; }
-  note.hit = true; if (note.el) note.el.remove(); if (note.outlineEl) note.outlineEl.remove();
-  const p = dirToLaneXY(dir);
-  spawnPopup(result.toUpperCase(), result==='perfect' ? '#86efac' : '#93c5fd', {x:p.x, y:p.y});
-  burst(p.x, p.y, 0.02, result==='perfect' ? '#86efac' : '#93c5fd');
-  applyJudge(result, dir);
-}
+function handleHandsUp(){ /* resolved in cull */ }
 
-function playSfx(id){ const el=document.getElementById(id); if (!el) return; try{ el.currentTime=0; el.play(); }catch(e){} }
-function applyJudge(j, dir){
-  if (j==='perfect'){ APP.score += 120; APP.combo += 1; APP.perfectCount += 1; playSfx('sfxPerfect'); }
-  else if (j==='good'){ APP.score += 80; APP.combo += 1; APP.goodCount += 1; playSfx('sfxGood'); }
-  else { APP.combo = 0; APP.missCount += 1; playSfx('sfxMiss'); }
-  APP.maxCombo = Math.max(APP.maxCombo, APP.combo); updateHUD();
-}
-
-function setupPinchHandlers(){
-  ['#leftHand','#rightHand'].forEach(id => {
-    const hand = document.querySelector(id); if (!hand) return;
-    hand.addEventListener('pinchstarted', () => {
-      if (APP.state!=='playing') return;
-      const hpos = worldPos(hand);
-      const lanes = [
-        {dir:'up',   el: document.querySelector('#lane-up')},
-        {dir:'down', el: document.querySelector('#lane-down')},
-        {dir:'left', el: document.querySelector('#lane-left')},
-        {dir:'right',el: document.querySelector('#lane-right')},
-      ];
-      let best = lanes[0], bestD = 999;
-      lanes.forEach(L => { const p = worldPos(L.el); const d = Math.hypot(hpos.x - p.x, hpos.y - p.y); if (d < bestD){ bestD = d; best = L; } });
-      if (best) tryHit(best.dir);
-    });
+(function initFallbackHandDrag(){
+  let dragging=false; let last=null;
+  function toWorldDelta(dx, dy){ return { x: dx/300, y: -dy/300 }; }
+  window.addEventListener('pointerdown', e=>{ dragging=true; last={x:e.clientX,y:e.clientY}; });
+  window.addEventListener('pointerup', ()=>{ dragging=false; last=null; });
+  window.addEventListener('pointermove', e=>{
+    if (!dragging || !last) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; last={x:e.clientX,y:e.clientY};
+    const d = toWorldDelta(dx,dy);
+    const lh = document.getElementById('leftHand'); const rh = document.getElementById('rightHand');
+    const lp = lh.object3D.position; const rp = rh.object3D.position;
+    lp.x += d.x; lp.y = Math.max(0.4, Math.min(2.2, lp.y + d.y));
+    rp.x += d.x; rp.y = Math.max(0.4, Math.min(2.2, rp.y + d.y));
   });
-}
+})();
 
-window.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#click-handler').setAttribute('click-bindings','');
-  setupPinchHandlers();
+ui.start.addEventListener('click', ()=>{ startGame(); requestAnimationFrame(tick); });
+ui.how.addEventListener('click', ()=>{
+  alert('HOW TO PLAY\\n\\n• Punch green targets as they reach you.\\n• Duck under red hurdles (lower your head).\\n• Raise both hands when you see the big up arrow.\\n• Earn PERFECT / GOOD / MISS. Build combo for extra points.');
 });
+
+resetGame();
