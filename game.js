@@ -1,15 +1,20 @@
-// Fitness Adventure VR — split into game.js
+// Fitness Adventure VR — Beat Map JSON system + progressive difficulty
 const APP = {
   running: false,
+  duration: 60,
   timeLeft: 60,
   score: 0,
   combo: 0,
-  perfectWindow: 0.25,
-  goodWindow: 0.5,
-  speed: 2.2,
+  basePerfect: 0.28,
+  baseGood: 0.52,
+  perfectWindow: 0.28,
+  goodWindow: 0.52,
+  baseSpeed: 2.0,
+  speed: 2.0,
   track: [],
   nextIdx: 0,
-  lastTick: 0
+  lastTick: 0,
+  mapMeta: { title: "Free Run", bpm: 0 }
 };
 
 const hud = {
@@ -17,36 +22,60 @@ const hud = {
   time: document.getElementById('hudTime'),
   score: document.getElementById('hudScore'),
   combo: document.getElementById('hudCombo'),
+  diff: document.getElementById('hudDiff'),
 };
 
 const ui = {
   start: document.getElementById('btnStart'),
   how: document.getElementById('btnHow'),
+  selectBeat: document.getElementById('selectBeat'),
 };
+
+async function loadBeatMap(url){
+  try{
+    const res = await fetch(url, {cache:'no-store'});
+    const json = await res.json();
+    const events = (json.events||[]).slice().sort((a,b)=>a.t-b.t);
+    APP.duration = json.duration || 60;
+    APP.mapMeta = { title: json.title||'Beat Map', bpm: json.bpm||0 };
+    return events;
+  }catch(e){
+    console.warn("Beat map load failed, fallback to generator", e);
+    return buildTrack();
+  }
+}
 
 function buildTrack(){
   const track = [];
   let t = 2.0;
-  while(t < 58){
+  while (t < APP.duration - 2){
     const r = Math.random();
-    if (r < 0.4){ track.push({ t, type: (Math.random()<0.5?'punchL':'punchR') }); t += 1.7; }
-    else if (r < 0.7){ track.push({ t, type: 'duck' }); t += 2.0; }
-    else { track.push({ t, type: 'handsUp' }); t += 1.8; }
+    if (r < 0.5) track.push({ t, type: (Math.random()<0.5?'punchL':'punchR') });
+    else if (r < 0.75) track.push({ t, type:'duck' });
+    else track.push({ t, type:'handsUp' });
+    t += 1.6 + (Math.random()*0.4);
   }
   return track;
 }
 
 function resetGame(){
   APP.running = false;
-  APP.timeLeft = 60;
+  APP.timeLeft = APP.duration;
   APP.score = 0; APP.combo = 0; APP.nextIdx = 0; APP.lastTick = 0;
-  APP.track = buildTrack();
-  hud.time.textContent = APP.timeLeft; hud.score.textContent = APP.score; hud.combo.textContent = APP.combo;
+  APP.perfectWindow = APP.basePerfect;
+  APP.goodWindow = APP.baseGood;
+  APP.speed = APP.baseSpeed;
+  hud.time.textContent = APP.timeLeft;
+  hud.score.textContent = APP.score;
+  hud.combo.textContent = APP.combo;
+  if (hud.diff) hud.diff.textContent = 0;
   document.getElementById('summaryPanel').setAttribute('visible', false);
   document.getElementById('titleBoard').setAttribute('visible', true);
 }
 
-function startGame(){
+async function startGame(){
+  const url = ui.selectBeat ? ui.selectBeat.value : 'assets/beatmap_easy.json';
+  APP.track = await loadBeatMap(url);
   resetGame();
   APP.running = true;
   hud.root.hidden = false;
@@ -120,12 +149,15 @@ function feedback(text, color){
 
 function addScore(kind){
   let delta=0; let color="#fff";
-  if (kind==='perfect'){ delta=300; color="#7CFC00"; APP.combo++; }
+  if (kind==='perfect'){ delta=360; color="#7CFC00"; APP.combo++; }
   else if (kind==='good'){ delta=120; color="#A7F3D0"; APP.combo=0; }
   else { delta=0; color="#ffb3b3"; APP.combo=0; }
-  APP.score += delta + Math.floor(APP.combo*5);
+  const elapsed = APP.duration - APP.timeLeft;
+  const p = Math.min(1, Math.max(0, elapsed / APP.duration));
+  const mult = 1 + Math.floor(p*3); // x1..x4
+  APP.score += (delta + Math.floor(APP.combo*6)) * mult;
   hud.score.textContent = APP.score; hud.combo.textContent = APP.combo;
-  feedback(kind.toUpperCase(), color);
+  feedback((mult>1?`x${mult} `:'') + kind.toUpperCase(), color);
   const id = kind==='perfect'?'sfxPerfect':(kind==='good'?'sfxGood':'sfxMiss');
   const el = document.getElementById(id); if (el){ el.currentTime=0; el.play().catch(()=>{}); }
 }
@@ -136,9 +168,9 @@ function endGame(){
   const bgm = document.getElementById('bgm'); if (bgm) bgm.pause();
   [...world.children].forEach(c=>world.removeChild(c));
   const s = document.getElementById('summaryPanel');
-  const stars = APP.score>3200? '★★★' : (APP.score>1800? '★★☆' : '★☆☆');
+  const stars = APP.score>4800? '★★★' : (APP.score>2500? '★★☆' : '★☆☆');
   s.querySelector('#sumStars').setAttribute('text', `value: ${stars}; align:center; color:#FFD166; width: 2`);
-  s.querySelector('#sumStats').setAttribute('text', `value: Score: ${APP.score} | Time: 60s; align:center; color:#CFE8FF; width:2`);
+  s.querySelector('#sumStats').setAttribute('text', `value: Score: ${APP.score} | Time: ${APP.duration}s; align:center; color:#CFE8FF; width:2`);
   s.setAttribute('visible', true);
   document.getElementById('titleBoard').setAttribute('visible', true);
 }
@@ -148,19 +180,29 @@ function tick(t){
   if (!APP.lastTick) APP.lastTick=t; const dt=(t-APP.lastTick)/1000; APP.lastTick=t;
   APP.timeLeft -= dt; if (APP.timeLeft<=0){ APP.timeLeft=0; endGame(); }
   hud.time.textContent = Math.ceil(APP.timeLeft);
-  const nowSec = 60-APP.timeLeft;
-  while(APP.nextIdx < APP.track.length && APP.track[APP.nextIdx].t <= nowSec+2.0){
+
+  const elapsed = APP.duration - APP.timeLeft;
+  const p = Math.min(1, Math.max(0, elapsed / APP.duration));
+  APP.speed = APP.baseSpeed + 1.6 * p;
+  APP.perfectWindow = APP.basePerfect - 0.10 * p;
+  APP.goodWindow = APP.baseGood - 0.12 * p;
+  if (hud.diff) hud.diff.textContent = Math.round(p*100);
+
+  while(APP.nextIdx < APP.track.length && APP.track[APP.nextIdx].t <= elapsed + 2.2){
     const evt = APP.track[APP.nextIdx++];
     if (evt.type==='punchL') spawnTarget('L');
     else if (evt.type==='punchR') spawnTarget('R');
     else if (evt.type==='duck') spawnHurdle();
     else if (evt.type==='handsUp') spawnHandsUpCue();
   }
+
   const dz = APP.speed * dt;
   [...world.children].forEach(el=>{ el.object3D.position.z += dz; });
+
   handlePunches();
   handleDuck();
   handleHandsUp();
+
   pools.targets = pools.targets.filter(o=>{
     const z=o.el.object3D.position.z; if (z>0){
       if (o.active){ addScore('miss'); o.active=false; }
@@ -184,6 +226,7 @@ function tick(t){
       world.removeChild(o.el); return false;
     } return true;
   });
+
   requestAnimationFrame(tick);
 }
 
@@ -235,7 +278,8 @@ function handleHandsUp(){ /* resolved in cull */ }
 
 ui.start.addEventListener('click', ()=>{ startGame(); requestAnimationFrame(tick); });
 ui.how.addEventListener('click', ()=>{
-  alert('HOW TO PLAY\\n\\n• Punch green targets as they reach you.\\n• Duck under red hurdles (lower your head).\\n• Raise both hands when you see the big up arrow.\\n• Earn PERFECT / GOOD / MISS. Build combo for extra points.');
+  const meta = APP.mapMeta;
+  alert('HOW TO PLAY\\n\\n• Punch green targets as they reach you.\\n• Duck under red hurdles (lower your head).\\n• Raise both hands when the big up arrow appears.\\n• Difficulty ramps up over time (speed, timing, multiplier).\\n\\nBeat Map: ' + meta.title + (meta.bpm? ('  |  BPM: '+meta.bpm):''));
 });
 
 resetGame();
