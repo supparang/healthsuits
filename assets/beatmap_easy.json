@@ -1,0 +1,183 @@
+{
+  "title": "Easy Run",
+  "duration": 60,
+  "bpm": 120,
+  "events": [
+    {
+      "t": 2.0,
+      "type": "punchR"
+    },
+    {
+      "t": 3.29,
+      "type": "handsUp"
+    },
+    {
+      "t": 4.51,
+      "type": "handsUp"
+    },
+    {
+      "t": 5.8,
+      "type": "duck"
+    },
+    {
+      "t": 7.03,
+      "type": "punchL"
+    },
+    {
+      "t": 8.22,
+      "type": "handsUp"
+    },
+    {
+      "t": 9.57,
+      "type": "punchR"
+    },
+    {
+      "t": 10.99,
+      "type": "duck"
+    },
+    {
+      "t": 12.32,
+      "type": "punchL"
+    },
+    {
+      "t": 13.7,
+      "type": "punchL"
+    },
+    {
+      "t": 14.92,
+      "type": "punchL"
+    },
+    {
+      "t": 16.29,
+      "type": "punchL"
+    },
+    {
+      "t": 17.6,
+      "type": "duck"
+    },
+    {
+      "t": 18.9,
+      "type": "duck"
+    },
+    {
+      "t": 20.19,
+      "type": "punchL"
+    },
+    {
+      "t": 21.54,
+      "type": "punchL"
+    },
+    {
+      "t": 22.84,
+      "type": "punchL"
+    },
+    {
+      "t": 24.12,
+      "type": "handsUp"
+    },
+    {
+      "t": 25.39,
+      "type": "handsUp"
+    },
+    {
+      "t": 26.77,
+      "type": "punchL"
+    },
+    {
+      "t": 28.18,
+      "type": "punchR"
+    },
+    {
+      "t": 29.6,
+      "type": "punchL"
+    },
+    {
+      "t": 30.92,
+      "type": "punchR"
+    },
+    {
+      "t": 32.18,
+      "type": "punchL"
+    },
+    {
+      "t": 33.59,
+      "type": "handsUp"
+    },
+    {
+      "t": 34.8,
+      "type": "punchL"
+    },
+    {
+      "t": 35.98,
+      "type": "punchR"
+    },
+    {
+      "t": 37.2,
+      "type": "duck"
+    },
+    {
+      "t": 38.48,
+      "type": "punchL"
+    },
+    {
+      "t": 39.76,
+      "type": "punchR"
+    },
+    {
+      "t": 41.04,
+      "type": "punchR"
+    },
+    {
+      "t": 42.43,
+      "type": "handsUp"
+    },
+    {
+      "t": 43.76,
+      "type": "handsUp"
+    },
+    {
+      "t": 44.94,
+      "type": "punchL"
+    },
+    {
+      "t": 46.12,
+      "type": "punchR"
+    },
+    {
+      "t": 47.36,
+      "type": "handsUp"
+    },
+    {
+      "t": 48.62,
+      "type": "punchL"
+    },
+    {
+      "t": 49.81,
+      "type": "punchL"
+    },
+    {
+      "t": 50.99,
+      "type": "punchR"
+    },
+    {
+      "t": 52.2,
+      "type": "duck"
+    },
+    {
+      "t": 53.58,
+      "type": "punchR"
+    },
+    {
+      "t": 54.8,
+      "type": "punchL"
+    },
+    {
+      "t": 56.18,
+      "type": "punchL"
+    },
+    {
+      "t": 57.4,
+      "type": "duck"
+    }
+  ]
+}
