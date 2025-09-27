@@ -7,13 +7,18 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     .ui { position: fixed; left: 12px; bottom: 12px; z-index: 10; font-family: system-ui, Arial; }
-    .ui button{ padding:10px 14px; margin-right:6px; border-radius:12px; border: none; font-weight:600; box-shadow: 0 2px 8px rgba(0,0,0,.15)}
-    .hud { position: fixed; right: 12px; top: 12px; z-index: 10; font-family: system-ui, Arial; background: rgba(0,0,0,.45); color:#fff; padding:10px 14px; border-radius:12px; min-width:180px }
+    .ui button, .ui select { padding:10px 14px; margin-right:6px; border-radius:12px; border: none; font-weight:600; box-shadow: 0 2px 8px rgba(0,0,0,.15) }
+    .hud { position: fixed; right: 12px; top: 12px; z-index: 10; font-family: system-ui, Arial; background: rgba(0,0,0,.45); color:#fff; padding:10px 14px; border-radius:12px; min-width:200px }
     .hud b { font-size: 18px }
   </style>
 </head>
 <body>
   <div class="ui">
+    <select id="selectBeat">
+      <option value="assets/beatmap_easy.json">Easy</option>
+      <option value="assets/beatmap_normal.json">Normal</option>
+      <option value="assets/beatmap_hard.json">Hard</option>
+    </select>
     <button id="btnStart">Start</button>
     <button id="btnHow">How to Play</button>
   </div>
@@ -22,6 +27,7 @@
     <div>Time: <span id="hudTime">60</span>s</div>
     <div>Score: <span id="hudScore">0</span></div>
     <div>Combo: <span id="hudCombo">0</span></div>
+    <div>Diff: <span id="hudDiff">0</span>%</div>
   </div>
 
   <a-scene renderer="antialias: true; colorManagement: true" background="color: #1e2a38">
@@ -43,7 +49,7 @@
     <a-entity id="titleBoard" position="0 1.6 -1.8">
       <a-plane width="1.8" height="1" color="#0e1726" opacity="0.95" material="shader: standard; emissive: #0e1726; emissiveIntensity: .4"></a-plane>
       <a-entity text="value: FITNESS ADVENTURE VR; align: center; color: #FFFFFF; width: 2.2"></a-entity>
-      <a-entity position="0 -0.33 0" text="value: Move to dodge, punch targets, raise hands.; align:center; color:#CFE8FF; width: 2"></a-entity>
+      <a-entity position="0 -0.33 0" text="value: Select beat map → Start. Move to dodge, punch targets, raise hands.; align:center; color:#CFE8FF; width: 2.1"></a-entity>
     </a-entity>
 
     <a-entity id="world"></a-entity>
