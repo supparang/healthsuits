@@ -1,86 +1,258 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fitness Adventure VR — Multi-song + BPM Sync</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <style>
-    .ui { position: fixed; left: 12px; bottom: 12px; z-index: 10; font-family: system-ui, Arial; display:flex; gap:6px; flex-wrap:wrap }
-    .ui button, .ui select, .ui input{ padding:10px 12px; border-radius:12px; border: none; font-weight:600; box-shadow: 0 2px 8px rgba(0,0,0,.15) }
-    .hud { position: fixed; right: 12px; top: 12px; z-index: 10; font-family: system-ui, Arial; background: rgba(0,0,0,.45); color:#fff; padding:10px 14px; border-radius:12px; min-width:200px }
-    .hud b { font-size: 18px }
-  </style>
+    <title>นักรบโภชนาการ VR</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif; /* ใช้ฟอนต์ที่อ่านง่าย */
+            background-color: #111;
+            color: #fff;
+            overflow: hidden; /* ป้องกันการเลื่อนหน้าจอ */
+        }
+        canvas {
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 10;
+            pointer-events: none; /* ทำให้ UI ไม่บังการคลิกใน VR */
+        }
+        .score {
+            font-size: 5vw; /* ขนาดตัวอักษรปรับตามความกว้างจอ */
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+        }
+        .message {
+            font-size: 3vw;
+            margin-top: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 15px;
+        }
+        /* ซ่อนปุ่ม VR เริ่มต้นของ three.js เพื่อใช้ปุ่มของเราเอง */
+        #VRButton {
+            position: absolute !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            z-index: 100;
+        }
+    </style>
+    <!-- โหลด Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="ui">
-    <select id="selectBeat">
-      <option value="assets/beatmap_easy.json">Easy</option>
-      <option value="assets/beatmap_normal.json">Normal</option>
-      <option value="assets/beatmap_hard.json">Hard</option>
-    </select>
-    <select id="selectSong">
-      <option value="assets/song_easy.wav" data-bpm="120">Song: Easy (120 BPM)</option>
-      <option value="assets/song_normal.wav" data-bpm="128">Song: Normal (128 BPM)</option>
-      <option value="assets/song_hard.wav" data-bpm="140">Song: Hard (140 BPM)</option>
-    </select>
-    <label>Custom song <input type="file" id="fileSong" accept="audio/*"></label>
-    <button id="btnStart">Start</button>
-    <button id="btnHow">How to Play</button>
-    <button id="btnPreview">Metronome Preview</button>
-  </div>
-  <div class="hud" id="hud" hidden>
-    <div><b>Fitness Adventure</b></div>
-    <div>Time: <span id="hudTime">60</span>s</div>
-    <div>Score: <span id="hudScore">0</span></div>
-    <div>Combo: <span id="hudCombo">0</span></div>
-    <div>Diff: <span id="hudDiff">0</span>%</div>
-  </div>
+    <!-- ส่วนแสดงผล UI เช่น คะแนน และข้อความ -->
+    <div id="ui">
+        <div id="score" class="score">คะแนน: 0</div>
+        <div id="message" class="message">กดปุ่ม Trigger บนคอนโทรลเลอร์เพื่อเริ่มเกม!</div>
+    </div>
 
-  <a-scene renderer="antialias: true; colorManagement: true" background="color: #1e2a38">
-    <a-entity id="rig" position="0 1.6 3">
-      <a-entity id="camera" camera look-controls wasd-controls="enabled:false"></a-entity>
-      <a-entity id="cursor" cursor="fuse:false" raycaster="objects: .clickable" position="0 0 -0.1">
-        <a-ring radius-inner="0.005" radius-outer="0.008" color="#fff"></a-ring>
-      </a-entity>
-      <a-sphere id="leftHand" radius="0.05" color="#66ccff" position="-0.25 1.2 -0.2" opacity="0.5"></a-sphere>
-      <a-sphere id="rightHand" radius="0.05" color="#ff99cc" position="0.25 1.2 -0.2" opacity="0.5"></a-sphere>
-    </a-entity>
+    <!-- REMOVED: Old script tags are no longer needed -->
 
-    <a-plane rotation="-90 0 0" width="20" height="120" color="#2b3b4d" position="0 0 0"></a-plane>
-    <a-plane rotation="-90 0 0" width="2" height="120" color="#2f4f6f" position="0 0 0"></a-plane>
+    <script type="module">
+        // FIXED: Switched to ES6 modules for reliable script loading.
+        // This prevents race conditions by ensuring libraries are loaded before they are used.
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+        import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/VRButton.js';
 
-    <a-entity light="type: ambient; color: #BBD1FF; intensity: 0.6"></a-entity>
-    <a-entity light="type: directional; color: #FFF; intensity: 0.8" position="1 2 0"></a-entity>
+        // --- การตั้งค่าพื้นฐาน (Setup) ---
+        let camera, scene, renderer;
+        let controller1, controller2;
+        let saber1, saber2;
 
-    <a-entity id="titleBoard" position="0 1.6 -1.8">
-      <a-plane width="1.8" height="1" color="#0e1726" opacity="0.95" material="shader: standard; emissive: #0e1726; emissiveIntensity: .4"></a-plane>
-      <a-entity text="value: FITNESS ADVENTURE VR; align: center; color: #FFFFFF; width: 2.2"></a-entity>
-      <a-entity position="0 -0.33 0" text="value: Select song + beat map → Start. Raise hands, punch, duck; align:center; color:#CFE8FF; width: 2.1"></a-entity>
-    </a-entity>
+        // --- ตัวแปรสำหรับเกม (Game Variables) ---
+        const foods = []; // อาร์เรย์สำหรับเก็บอาหารทั้งหมดที่ลอยอยู่
+        let score = 0;
+        let isPlaying = false;
+        let spawnInterval;
 
-    <a-entity id="world"></a-entity>
+        // Start the application directly. Module scripts are deferred by default.
+        init();
+        animate();
+        
+        function init() {
+            // 1. Scene (ฉาก): เหมือนเวทีละครสำหรับวัตถุ 3D
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x201547); // สีท้องฟ้ายามค่ำคืน
 
-    <a-entity id="fxTemplate" position="0 2 -2" visible="false">
-      <a-entity id="fxText" text="value: PERFECT; align:center; color:#7CFC00; width: 3"></a-entity>
-    </a-entity>
+            // 2. Camera (กล้อง): มุมมองของผู้เล่น
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.6, 0); // ตั้งตำแหน่งกล้องให้สูงระดับสายตา
 
-    <a-entity id="summaryPanel" visible="false" position="0 1.6 -2">
-      <a-plane width="1.8" height="1.1" color="#0e1726" opacity="0.95" material="shader: standard; emissive: #0e1726; emissiveIntensity: .3"></a-plane>
-      <a-entity id="sumTitle" position="0 0.3 0" text="value: SUMMARY; align:center; color: #FFFFFF; width: 2.2"></a-entity>
-      <a-entity id="sumStars" position="0 0.05 0" text="value: ★☆☆; align:center; color:#FFD166; width: 2"></a-entity>
-      <a-entity id="sumStats" position="0 -0.22 0" text="value: Score: 0 | Time: 60s; align:center; color:#CFE8FF; width: 2"></a-entity>
-    </a-entity>
+            // 3. Renderer (ตัววาดภาพ): ทำหน้าที่วาดภาพจาก Scene และ Camera ลงบนจอ
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true; // เปิดใช้งาน WebXR!
+            document.body.appendChild(renderer.domElement);
 
-    <a-assets>
-      <audio id="sfxPerfect" src="assets/metronome.wav"></audio>
-      <audio id="sfxGood" src="assets/metronome.wav"></audio>
-      <audio id="sfxMiss" src="assets/metronome.wav"></audio>
-      <audio id="bgm" src="assets/song_easy.wav"></audio>
-      <audio id="metronome" src="assets/metronome.wav"></audio>
-    </a-assets>
-  </a-scene>
+            // 4. VR Button (ปุ่มเข้า VR)
+            document.body.appendChild(VRButton.createButton(renderer));
 
-  <script src="player.js"></script>
+            // 5. Lights (แสง): ถ้าไม่มีแสง เราจะมองไม่เห็นอะไรเลย
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // แสงทั่วไปนวลๆ
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // แสงจากดวงอาทิตย์
+            directionalLight.position.set(5, 10, 7.5);
+            scene.add(directionalLight);
+
+            // 6. Floor (พื้น)
+            const floorGeometry = new THREE.PlaneGeometry(10, 10, 10, 10);
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, wireframe: true });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2; // หมุนให้ราบไปกับพื้น
+            scene.add(floor);
+
+            // --- ตั้งค่าคอนโทรลเลอร์ VR (VR Controllers) ---
+            // คอนโทรลเลอร์ข้างซ้าย
+            controller1 = renderer.xr.getController(0);
+            controller1.addEventListener('selectstart', startGame); // เมื่อกดปุ่ม Trigger
+            scene.add(controller1);
+
+            // คอนโทรลเลอร์ข้างขวา
+            controller2 = renderer.xr.getController(1);
+            controller2.addEventListener('selectstart', startGame);
+            scene.add(controller2);
+
+            // สร้างดาบ (Sabers) สำหรับคอนโทรลเลอร์
+            const saberGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.8, 32);
+            
+            // ดาบเล่มที่ 1 (สีฟ้า)
+            const saberMaterial1 = new THREE.MeshStandardMaterial({ color: 0x22aaff, emissive: 0x22aaff, emissiveIntensity: 1 });
+            saber1 = new THREE.Mesh(saberGeometry, saberMaterial1);
+            saber1.rotation.x = -Math.PI / 2;
+            controller1.add(saber1);
+
+            // ดาบเล่มที่ 2 (สีแดง)
+            const saberMaterial2 = new THREE.MeshStandardMaterial({ color: 0xff2255, emissive: 0xff2255, emissiveIntensity: 1 });
+            saber2 = new THREE.Mesh(saberGeometry, saberMaterial2);
+            saber2.rotation.x = -Math.PI / 2;
+            controller2.add(saber2);
+
+            // จัดการขนาดหน้าจอเมื่อมีการเปลี่ยนแปลง
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- กลไกของเกม (Game Mechanics) ---
+        function startGame() {
+            if (isPlaying) return; // ถ้าเกมเล่นอยู่แล้ว ไม่ต้องเริ่มใหม่
+            
+            isPlaying = true;
+            score = 0;
+            updateScore(0);
+            document.getElementById('message').style.display = 'none';
+
+            // เริ่มปล่อยอาหารออกมาทุกๆ 1 วินาที
+            spawnInterval = setInterval(spawnFood, 1000);
+        }
+
+        function spawnFood() {
+            const isGoodFood = Math.random() > 0.3; // 70% เป็นอาหารดี, 30% เป็นอาหารไม่ดี
+            let food;
+
+            if (isGoodFood) {
+                // อาหารดี: ทรงกลม (ผลไม้)
+                const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+                const colors = [0x00ff00, 0xffff00, 0xffa500]; // เขียว, เหลือง, ส้ม
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const material = new THREE.MeshStandardMaterial({ color: color });
+                food = new THREE.Mesh(geometry, material);
+                food.userData = { type: 'good', points: 10 };
+            } else {
+                // อาหารไม่ดี: ทรงกล่อง (ขนม)
+                const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const material = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // สีน้ำตาล
+                food = new THREE.Mesh(geometry, material);
+                food.userData = { type: 'bad', points: -5 };
+            }
+
+            // สุ่มตำแหน่งเริ่มต้นของอาหาร
+            food.position.x = (Math.random() - 0.5) * 4; // สุ่มซ้ายขวา
+            food.position.y = 1 + Math.random() * 1; // สุ่มความสูง
+            food.position.z = -10; // เริ่มจากไกลๆ
+
+            scene.add(food);
+            foods.push(food);
+        }
+        
+        function updateScore(points) {
+            score += points;
+            document.getElementById('score').textContent = `คะแนน: ${score}`;
+        }
+
+        function handleCollisions() {
+            const sabers = [saber1, saber2];
+            
+            sabers.forEach(saber => {
+                // ถ้าดาบไม่แสดงอยู่ ก็ไม่ต้องเช็ค
+                if (!saber.parent.visible) return;
+
+                const saberPosition = new THREE.Vector3();
+                saber.getWorldPosition(saberPosition); // ตำแหน่งของดาบในโลก 3D
+
+                // วนลูปเช็คอาหารแต่ละชิ้น
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    const food = foods[i];
+                    const distance = saberPosition.distanceTo(food.position);
+
+                    // เช็คว่าดาบชนอาหารหรือไม่ (ระยะห่างน้อยกว่า 0.2)
+                    if (distance < 0.2) { 
+                        updateScore(food.userData.points);
+                        
+                        // ลบอาหารออกจากฉากและอาร์เรย์
+                        scene.remove(food);
+                        foods.splice(i, 1);
+                    }
+                }
+            });
+        }
+
+
+        // --- Game Loop (วงจรหลักของเกม) ---
+        function animate() {
+            renderer.setAnimationLoop(render);
+        }
+        
+        function render() {
+            if (isPlaying) {
+                // ทำให้วัตถุเคลื่อนที่
+                foods.forEach((food, index) => {
+                    food.position.z += 0.05; // เคลื่อนที่เข้ามาหาผู้เล่น
+
+                    // ถ้าอาหารลอยผ่านไปแล้ว ให้ลบออก
+                    if (food.position.z > 1) {
+                        scene.remove(food);
+                        foods.splice(index, 1);
+                    }
+                });
+                
+                // ตรวจสอบการชนกัน
+                handleCollisions();
+            }
+
+            // วาดภาพลงบนจอ
+            renderer.render(scene, camera);
+        }
+    </script>
 </body>
 </html>
+
