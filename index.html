@@ -44,7 +44,6 @@
             transition: transform 0.1s ease-out;
             transform: scale(0); /* ซ่อนไว้ตอนเริ่มต้น */
         }
-        /* NEW: UI สำหรับสถานะ Power-up */
         .powerup-status {
             font-size: 2.5vw;
             position: absolute;
@@ -101,6 +100,7 @@
         
         // --- ตัวแปรสำหรับเสียง ---
         let hitGoodSound, hitBadSound, startSound, powerupSound, backgroundMusic;
+        let isAudioReady = false; // FIXED: เพิ่มตัวแปรเช็คสถานะเสียง
 
         // --- ตัวแปรสำหรับเกม ---
         const foods = [];
@@ -123,7 +123,6 @@
         animate();
         
         function init() {
-            // NEW: โหลดคะแนนสูงสุด
             highScore = parseInt(localStorage.getItem('nutritionWarriorHighScore') || '0');
             
             scene = new THREE.Scene();
@@ -152,8 +151,9 @@
             floor.rotation.x = -Math.PI / 2;
             scene.add(floor);
             
+            // FIXED: เปลี่ยนจากการเรียก startGame โดยตรง เป็น handleUserInteraction
             function onControllerConnected(controller) {
-                controller.addEventListener('selectstart', startGame);
+                controller.addEventListener('selectstart', handleUserInteraction);
             }
             controller1 = renderer.xr.getController(0);
             controller1.addEventListener('connected', () => onControllerConnected(controller1));
@@ -176,13 +176,12 @@
             controller2.add(saber2);
 
             window.addEventListener('resize', onWindowResize, false);
-            window.addEventListener('mousedown', onMouseDown, false);
+            // FIXED: เปลี่ยนจากการเรียก onMouseDown โดยตรง เป็น handleUserInteraction
+            window.addEventListener('mousedown', handleUserInteraction, false);
         }
         
+        // UPDATED: แยกฟังก์ชัน setupSounds ออกมาจากการเริ่ม context
         function setupSounds() {
-            if (Tone.context.state !== 'running') {
-                Tone.start();
-            }
             const synthOptions = { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } };
             hitGoodSound = new Tone.Synth(synthOptions).toDestination();
             hitBadSound = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination();
@@ -202,20 +201,42 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function onMouseDown(event) {
-            if (!isPlaying) {
-                startGame();
-            } else {
+        // FIXED: สร้างฟังก์ชันกลางสำหรับจัดการการเริ่มเกม
+        function handleUserInteraction(event) {
+            // ถ้าเกมกำลังเล่นอยู่ และเป็นการคลิกเมาส์ ให้จัดการการฟันอาหาร
+            if (isPlaying && event && event.type === 'mousedown') {
                 mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
                 handleMouseCollision();
+                return;
+            }
+
+            // ถ้าเกมยังไม่เริ่ม หรือจบไปแล้ว
+            if (!isPlaying) {
+                if (!isAudioReady) {
+                    // การโต้ตอบครั้งแรกสุด: เริ่มระบบเสียงก่อน
+                    const messageEl = document.getElementById('message');
+                    messageEl.innerHTML = "กำลังเริ่ม...";
+                    
+                    Tone.start().then(() => {
+                        isAudioReady = true;
+                        setupSounds();
+                        startGame();
+                    }).catch(error => {
+                        console.error("ไม่สามารถเริ่มระบบเสียงได้:", error);
+                        // เริ่มเกมโดยไม่มีเสียง
+                        isAudioReady = true; 
+                        startGame();
+                    });
+                } else {
+                    // การเริ่มเกมครั้งถัดๆ ไป
+                    startGame();
+                }
             }
         }
 
         function startGame() {
             if (isPlaying) return;
-
-            if (!hitGoodSound) setupSounds();
             
             startSound.triggerAttackRelease("C4", "8n");
             Tone.Transport.start();
@@ -239,7 +260,7 @@
             hidePowerupStatus();
             document.getElementById('message').style.display = 'none';
 
-            scheduleNextSpawn(); // UPDATED: ใช้ระบบ spawn แบบใหม่
+            scheduleNextSpawn();
             gameTimer = setTimeout(endGame, GAME_DURATION * 1000);
         }
 
@@ -251,7 +272,6 @@
             clearTimeout(multiplierTimer);
             Tone.Transport.stop();
             
-            // NEW: อัปเดตและบันทึกคะแนนสูงสุด
             if (score > highScore) {
                 highScore = score;
                 localStorage.setItem('nutritionWarriorHighScore', highScore);
@@ -264,12 +284,11 @@
             hidePowerupStatus();
         }
 
-        // UPDATED: ระบบความยากที่เพิ่มขึ้น
         function scheduleNextSpawn() {
             if (!isPlaying) return;
-            const progress = 1 - (remainingTime / GAME_DURATION); // 0.0 -> 1.0
-            const minInterval = 300; // ms
-            const maxInterval = 1000; // ms
+            const progress = 1 - (remainingTime / GAME_DURATION);
+            const minInterval = 300;
+            const maxInterval = 1000;
             const interval = maxInterval - (maxInterval - minInterval) * progress;
             
             spawnTimeout = setTimeout(() => {
@@ -284,33 +303,32 @@
             let food;
             const speed = 0.03 + Math.random() * 0.04;
 
-            // ปรับโอกาสเกิดไอเท็ม
-            if (rand < 0.04) { // 4% แอปเปิ้ลทอง
+            if (rand < 0.04) {
                 const geometry = new THREE.IcosahedronGeometry(0.18, 0);
                 const material = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xFFD700, emissiveIntensity: 0.5 });
                 food = new THREE.Mesh(geometry, material);
                 food.userData = { type: 'golden', points: 50, speed: speed + 0.03 };
-            } else if (rand < 0.12) { // 8% ระเบิด
+            } else if (rand < 0.12) {
                 const geometry = new THREE.SphereGeometry(0.15, 16, 16);
                 const material = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xff0000, emissiveIntensity: 0.4 });
                 food = new THREE.Mesh(geometry, material);
                 food.userData = { type: 'bomb', points: -25, speed: speed };
-            } else if (rand < 0.17) { // 5% นาฬิกา
+            } else if (rand < 0.17) {
                 const geometry = new THREE.TorusGeometry(0.12, 0.04, 8, 24);
                 const material = new THREE.MeshStandardMaterial({ color: 0x00BFFF, emissive: 0x00BFFF, emissiveIntensity: 0.7 });
                 food = new THREE.Mesh(geometry, material);
                 food.userData = { type: 'slowmo', points: 0, speed: speed };
-            } else if (rand < 0.22) { // NEW: 5% ตัวคูณคะแนน
-                const geometry = new THREE.TetrahedronGeometry(0.15, 0); // รูปดาว
+            } else if (rand < 0.22) {
+                const geometry = new THREE.TetrahedronGeometry(0.15, 0);
                 const material = new THREE.MeshStandardMaterial({ color: 0x9400D3, emissive: 0x9400D3, emissiveIntensity: 0.8 });
                 food = new THREE.Mesh(geometry, material);
                 food.userData = { type: 'multiplier', points: 0, speed: speed };
-            } else if (rand < 0.45) { // 23% อาหารไม่ดี
+            } else if (rand < 0.45) {
                 const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
                 const material = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
                 food = new THREE.Mesh(geometry, material);
                 food.userData = { type: 'bad', points: -5, speed: speed };
-            } else { // 55% อาหารดี
+            } else {
                 const geometry = new THREE.SphereGeometry(0.15, 16, 16);
                 const colors = [0x00ff00, 0xffff00, 0xffa500];
                 const color = colors[Math.floor(Math.random() * colors.length)];
@@ -343,7 +361,6 @@
             }
         }
         
-        // NEW: ฟังก์ชันแสดงและซ่อนสถานะ Power-up
         function showPowerupStatus(text, color) {
             const statusEl = document.getElementById('powerup-status');
             statusEl.textContent = text;
@@ -366,7 +383,6 @@
             }, 5000);
         }
 
-        // NEW: ฟังก์ชันเปิดใช้ตัวคูณคะแนน
         function activateMultiplier() {
             powerupSound.triggerAttackRelease("G4", "4n");
             scoreMultiplier = 2;
@@ -375,7 +391,7 @@
             multiplierTimer = setTimeout(() => {
                 scoreMultiplier = 1;
                 hidePowerupStatus();
-            }, 7000); // 7 วินาที
+            }, 7000);
         }
         
         function createExplosion(position, color) {
