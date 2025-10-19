@@ -64,6 +64,7 @@
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
         import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/VRButton.js';
+        import * as Tone from 'https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js';
 
         // --- การตั้งค่าพื้นฐาน ---
         let camera, scene, renderer;
@@ -73,6 +74,9 @@
         // --- ตัวแปรสำหรับเมาส์และคีย์บอร์ด ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
+        
+        // --- ตัวแปรสำหรับเสียง ---
+        let hitGoodSound, hitBadSound, startSound;
 
         // --- ตัวแปรสำหรับเกม ---
         const foods = [];
@@ -91,7 +95,7 @@
             scene.background = new THREE.Color(0x201547);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 1.6, 2); // ขยับกล้องถอยหลังเล็กน้อยสำหรับโหมดเดสก์ท็อป
+            camera.position.set(0, 1.6, 2);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -112,7 +116,6 @@
             floor.rotation.x = -Math.PI / 2;
             scene.add(floor);
             
-            // --- ตั้งค่าคอนโทรลเลอร์ VR ---
             function onControllerConnected(controller) {
                 controller.addEventListener('selectstart', startGame);
             }
@@ -136,9 +139,18 @@
             saber2.rotation.x = -Math.PI / 2;
             controller2.add(saber2);
 
-            // --- ตั้งค่าการควบคุมด้วยเมาส์ ---
             window.addEventListener('resize', onWindowResize, false);
             window.addEventListener('mousedown', onMouseDown, false);
+        }
+        
+        // NEW: ฟังก์ชันสำหรับตั้งค่าเสียง
+        function setupSounds() {
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+            hitGoodSound = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination();
+            hitBadSound = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination();
+            startSound = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination();
         }
 
         function onWindowResize() {
@@ -151,16 +163,20 @@
             if (!isPlaying) {
                 startGame();
             } else {
-                // ทำให้คลิกเมาส์เหมือนการ "ฟัน"
                 mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
                 handleMouseCollision();
             }
         }
 
-        // --- กลไกของเกม ---
         function startGame() {
             if (isPlaying) return;
+
+            // NEW: เริ่มระบบเสียงเมื่อผู้เล่นเริ่มเกมครั้งแรก
+            if (!hitGoodSound) {
+                setupSounds();
+            }
+            startSound.triggerAttackRelease("C4", "8n");
 
             if (spawnInterval) clearInterval(spawnInterval);
             if (gameTimer) clearTimeout(gameTimer);
@@ -187,29 +203,43 @@
             messageEl.innerHTML = `เกมจบแล้ว! คะแนนสุดท้าย: ${score}<br>คลิก หรือ กด Trigger เพื่อเล่นอีกครั้ง`;
             messageEl.style.display = 'block';
         }
-
+        
+        // UPDATED: ฟังก์ชันปล่อยอาหารที่ซับซ้อนขึ้น
         function spawnFood() {
             if (!isPlaying) return;
-            const isGoodFood = Math.random() > 0.3;
+            const rand = Math.random();
             let food;
+            const speed = 0.03 + Math.random() * 0.04; // สุ่มความเร็วพื้นฐาน
 
-            if (isGoodFood) {
+            if (rand < 0.05) { // 5% โอกาสเกิดแอปเปิ้ลทอง
+                const geometry = new THREE.IcosahedronGeometry(0.18, 0);
+                const material = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xFFD700, emissiveIntensity: 0.5 });
+                food = new THREE.Mesh(geometry, material);
+                food.userData = { type: 'golden', points: 50, speed: speed + 0.03 }; // เร็วเป็นพิเศษ
+            } else if (rand < 0.15) { // 10% โอกาสเกิดระเบิด
+                const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+                const material = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xff0000, emissiveIntensity: 0.4 });
+                food = new THREE.Mesh(geometry, material);
+                food.userData = { type: 'bomb', points: -25, speed: speed };
+            } else if (rand < 0.40) { // 25% อาหารไม่ดี
+                const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const material = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                food = new THREE.Mesh(geometry, material);
+                food.userData = { type: 'bad', points: -5, speed: speed };
+            } else { // 60% อาหารดี
                 const geometry = new THREE.SphereGeometry(0.15, 16, 16);
                 const colors = [0x00ff00, 0xffff00, 0xffa500];
                 const color = colors[Math.floor(Math.random() * colors.length)];
                 const material = new THREE.MeshStandardMaterial({ color: color });
                 food = new THREE.Mesh(geometry, material);
-                food.userData = { type: 'good', points: 10 };
-            } else {
-                const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-                const material = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-                food = new THREE.Mesh(geometry, material);
-                food.userData = { type: 'bad', points: -5 };
+                food.userData = { type: 'good', points: 10, speed: speed };
             }
 
             food.position.x = (Math.random() - 0.5) * 4;
             food.position.y = 1 + Math.random() * 1;
             food.position.z = -10;
+            food.rotation.x = Math.random() * Math.PI;
+            food.rotation.y = Math.random() * Math.PI;
 
             scene.add(food);
             foods.push(food);
@@ -219,22 +249,29 @@
             document.getElementById('score').textContent = `คะแนน: ${score} | เวลา: ${Math.ceil(remainingTime)}`;
         }
 
+        // NEW: ฟังก์ชันกลางสำหรับจัดการเมื่อฟันโดนอาหาร
+        function onFoodHit(food) {
+            score += food.userData.points;
+            updateScoreUI();
+
+            if (food.userData.type === 'good' || food.userData.type === 'golden') {
+                hitGoodSound.triggerAttackRelease("C5", "8n");
+            } else {
+                hitBadSound.triggerAttackRelease("C3", "8n");
+            }
+
+            const index = foods.indexOf(food);
+            if (index > -1) {
+                foods.splice(index, 1);
+            }
+            scene.remove(food);
+        }
+
         function handleMouseCollision() {
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(foods);
-
             if (intersects.length > 0) {
-                const intersectedFood = intersects[0].object;
-                
-                score += intersectedFood.userData.points;
-                updateScoreUI();
-                
-                // ค้นหาและลบอาหารออกจากอาร์เรย์และฉาก
-                const index = foods.indexOf(intersectedFood);
-                if (index > -1) {
-                    foods.splice(index, 1);
-                }
-                scene.remove(intersectedFood);
+                onFoodHit(intersects[0].object);
             }
         }
         
@@ -242,24 +279,17 @@
             const sabers = [saber1, saber2];
             sabers.forEach(saber => {
                 if (!saber.parent.visible) return;
-
                 const saberPosition = new THREE.Vector3();
                 saber.getWorldPosition(saberPosition);
-
                 for (let i = foods.length - 1; i >= 0; i--) {
                     const food = foods[i];
-                    const distance = saberPosition.distanceTo(food.position);
-                    if (distance < 0.2) { 
-                        score += food.userData.points;
-                        updateScoreUI();
-                        scene.remove(food);
-                        foods.splice(i, 1);
+                    if (saberPosition.distanceTo(food.position) < 0.2) { 
+                        onFoodHit(food);
                     }
                 }
             });
         }
 
-        // --- Game Loop ---
         function animate() {
             renderer.setAnimationLoop(render);
         }
@@ -280,18 +310,18 @@
 
             if (isPlaying) {
                 foods.forEach((food, index) => {
-                    food.position.z += 0.05;
-                    if (food.position.z > camera.position.z) { // ลบอาหารเมื่อลอยผ่านกล้องไปแล้ว
+                    food.position.z += food.userData.speed; // UPDATED: ใช้ความเร็วของแต่ละชิ้น
+                    food.rotation.x += 0.01;
+                    food.rotation.y += 0.01;
+                    if (food.position.z > camera.position.z) {
                         scene.remove(food);
                         foods.splice(index, 1);
                     }
                 });
 
-                // ตรวจสอบโหมดการเล่น
                 if (renderer.xr.isPresenting) {
                     handleVRCollisions();
-                } 
-                // การชนของเมาส์จะถูกจัดการใน onMouseDown()
+                }
             }
             renderer.render(scene, camera);
         }
