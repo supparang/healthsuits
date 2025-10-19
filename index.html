@@ -11,6 +11,7 @@
             background-color: #111;
             color: #fff;
             overflow: hidden; /* ป้องกันการเลื่อนหน้าจอ */
+            cursor: crosshair; /* เปลี่ยนเคอร์เซอร์เป็นเป้าเล็ง */
         }
         canvas {
             display: block;
@@ -42,7 +43,6 @@
             border-radius: 15px;
             line-height: 1.5;
         }
-        /* ซ่อนปุ่ม VR เริ่มต้นของ three.js เพื่อใช้ปุ่มของเราเอง */
         #VRButton {
             position: absolute !important;
             bottom: 20px !important;
@@ -56,29 +56,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- ส่วนแสดงผล UI เช่น คะแนน และข้อความ -->
     <div id="ui">
         <div id="score" class="score">คะแนน: 0 | เวลา: 30</div>
-        <div id="message" class="message">กดปุ่ม Trigger บนคอนโทรลเลอร์เพื่อเริ่มเกม!</div>
+        <div id="message" class="message">คลิก หรือ กดปุ่ม Trigger<br>เพื่อเริ่มเกม!</div>
     </div>
 
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
         import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/VRButton.js';
 
-        // --- การตั้งค่าพื้นฐาน (Setup) ---
+        // --- การตั้งค่าพื้นฐาน ---
         let camera, scene, renderer;
         let controller1, controller2;
         let saber1, saber2;
 
-        // --- ตัวแปรสำหรับเกม (Game Variables) ---
-        const foods = []; // อาร์เรย์สำหรับเก็บอาหารทั้งหมดที่ลอยอยู่
+        // --- ตัวแปรสำหรับเมาส์และคีย์บอร์ด ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // --- ตัวแปรสำหรับเกม ---
+        const foods = [];
         let score = 0;
         let isPlaying = false;
         let spawnInterval;
         let gameTimer;
         let remainingTime = 0;
-        const GAME_DURATION = 30; // 30 วินาทีต่อรอบ
+        const GAME_DURATION = 30;
 
         init();
         animate();
@@ -88,7 +91,7 @@
             scene.background = new THREE.Color(0x201547);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 1.6, 0);
+            camera.position.set(0, 1.6, 2); // ขยับกล้องถอยหลังเล็กน้อยสำหรับโหมดเดสก์ท็อป
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -108,19 +111,15 @@
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;
             scene.add(floor);
-
-            // --- ตั้งค่าคอนโทรลเลอร์ VR (VR Controllers) ---
-            // FIXED: เพิ่ม Event Listener หลังจากคอนโทรลเลอร์เชื่อมต่อแล้วเท่านั้น เพื่อป้องกัน Race Condition
+            
+            // --- ตั้งค่าคอนโทรลเลอร์ VR ---
             function onControllerConnected(controller) {
                 controller.addEventListener('selectstart', startGame);
             }
-
-            // คอนโทรลเลอร์ข้างซ้าย
             controller1 = renderer.xr.getController(0);
             controller1.addEventListener('connected', () => onControllerConnected(controller1));
             scene.add(controller1);
 
-            // คอนโทรลเลอร์ข้างขวา
             controller2 = renderer.xr.getController(1);
             controller2.addEventListener('connected', () => onControllerConnected(controller2));
             scene.add(controller2);
@@ -137,7 +136,9 @@
             saber2.rotation.x = -Math.PI / 2;
             controller2.add(saber2);
 
+            // --- ตั้งค่าการควบคุมด้วยเมาส์ ---
             window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('mousedown', onMouseDown, false);
         }
 
         function onWindowResize() {
@@ -146,7 +147,18 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- กลไกของเกม (Game Mechanics) ---
+        function onMouseDown(event) {
+            if (!isPlaying) {
+                startGame();
+            } else {
+                // ทำให้คลิกเมาส์เหมือนการ "ฟัน"
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+                handleMouseCollision();
+            }
+        }
+
+        // --- กลไกของเกม ---
         function startGame() {
             if (isPlaying) return;
 
@@ -172,7 +184,7 @@
             clearTimeout(gameTimer);
             
             const messageEl = document.getElementById('message');
-            messageEl.innerHTML = `เกมจบแล้ว! คะแนนสุดท้าย: ${score}<br>กด Trigger เพื่อเล่นอีกครั้ง`;
+            messageEl.innerHTML = `เกมจบแล้ว! คะแนนสุดท้าย: ${score}<br>คลิก หรือ กด Trigger เพื่อเล่นอีกครั้ง`;
             messageEl.style.display = 'block';
         }
 
@@ -207,9 +219,27 @@
             document.getElementById('score').textContent = `คะแนน: ${score} | เวลา: ${Math.ceil(remainingTime)}`;
         }
 
-        function handleCollisions() {
+        function handleMouseCollision() {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(foods);
+
+            if (intersects.length > 0) {
+                const intersectedFood = intersects[0].object;
+                
+                score += intersectedFood.userData.points;
+                updateScoreUI();
+                
+                // ค้นหาและลบอาหารออกจากอาร์เรย์และฉาก
+                const index = foods.indexOf(intersectedFood);
+                if (index > -1) {
+                    foods.splice(index, 1);
+                }
+                scene.remove(intersectedFood);
+            }
+        }
+        
+        function handleVRCollisions() {
             const sabers = [saber1, saber2];
-            
             sabers.forEach(saber => {
                 if (!saber.parent.visible) return;
 
@@ -219,11 +249,9 @@
                 for (let i = foods.length - 1; i >= 0; i--) {
                     const food = foods[i];
                     const distance = saberPosition.distanceTo(food.position);
-
                     if (distance < 0.2) { 
                         score += food.userData.points;
                         updateScoreUI();
-                        
                         scene.remove(food);
                         foods.splice(i, 1);
                     }
@@ -231,20 +259,18 @@
             });
         }
 
-        // --- Game Loop (วงจรหลักของเกม) ---
+        // --- Game Loop ---
         function animate() {
             renderer.setAnimationLoop(render);
         }
         
         let lastTime = 0;
         function render(time) {
-            // คำนวณเวลาที่ผ่านไป (delta time) เพื่อใช้จับเวลา
             if (lastTime > 0) {
-                const deltaTime = (time - lastTime) / 1000; // แปลง ms เป็นวินาที
+                const deltaTime = (time - lastTime) / 1000;
                 if (isPlaying && remainingTime > 0) {
                     const prevRemainingTime = remainingTime;
                     remainingTime = Math.max(0, remainingTime - deltaTime);
-                    // อัปเดต UI เวลาทุกๆ 1 วินาที เพื่อไม่ให้กระพริบ
                     if (Math.ceil(prevRemainingTime) !== Math.ceil(remainingTime)) {
                          updateScoreUI();
                     }
@@ -255,12 +281,17 @@
             if (isPlaying) {
                 foods.forEach((food, index) => {
                     food.position.z += 0.05;
-                    if (food.position.z > 1) {
+                    if (food.position.z > camera.position.z) { // ลบอาหารเมื่อลอยผ่านกล้องไปแล้ว
                         scene.remove(food);
                         foods.splice(index, 1);
                     }
                 });
-                handleCollisions();
+
+                // ตรวจสอบโหมดการเล่น
+                if (renderer.xr.isPresenting) {
+                    handleVRCollisions();
+                } 
+                // การชนของเมาส์จะถูกจัดการใน onMouseDown()
             }
             renderer.render(scene, camera);
         }
