@@ -35,6 +35,16 @@
             font-weight: bold;
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
         }
+        /* NEW: สไตล์สำหรับตัวหนังสือคอมโบ */
+        .combo {
+            font-size: 4vw;
+            font-weight: bold;
+            color: #ffc107; /* สีเหลืองอำพัน */
+            text-shadow: 0 0 8px rgba(255, 193, 7, 0.8);
+            margin-top: 10px;
+            transition: transform 0.1s ease-out;
+            transform: scale(0); /* ซ่อนไว้ตอนเริ่มต้น */
+        }
         .message {
             font-size: 3vw;
             margin-top: 20px;
@@ -58,6 +68,7 @@
 <body>
     <div id="ui">
         <div id="score" class="score">คะแนน: 0 | เวลา: 30</div>
+        <div id="combo" class="combo"></div> <!-- UI สำหรับคอมโบ -->
         <div id="message" class="message">คลิก หรือ กดปุ่ม Trigger<br>เพื่อเริ่มเกม!</div>
     </div>
 
@@ -76,16 +87,22 @@
         const mouse = new THREE.Vector2();
         
         // --- ตัวแปรสำหรับเสียง ---
-        let hitGoodSound, hitBadSound, startSound;
+        let hitGoodSound, hitBadSound, startSound, powerupSound, backgroundMusic;
 
         // --- ตัวแปรสำหรับเกม ---
         const foods = [];
+        const particles = []; // NEW: อาร์เรย์สำหรับเก็บเอฟเฟกต์
         let score = 0;
         let isPlaying = false;
         let spawnInterval;
         let gameTimer;
         let remainingTime = 0;
         const GAME_DURATION = 30;
+        
+        // NEW: ตัวแปรสำหรับระบบใหม่
+        let comboCount = 0;
+        let gameSpeedMultiplier = 1;
+        let slowMotionTimer;
 
         init();
         animate();
@@ -93,6 +110,7 @@
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x201547);
+            scene.fog = new THREE.Fog(0x201547, 5, 20); // เพิ่มหมอกเพื่อความลึก
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 1.6, 2);
@@ -110,7 +128,7 @@
             directionalLight.position.set(5, 10, 7.5);
             scene.add(directionalLight);
 
-            const floorGeometry = new THREE.PlaneGeometry(10, 10, 10, 10);
+            const floorGeometry = new THREE.PlaneGeometry(20, 20, 20, 20);
             const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, wireframe: true });
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;
@@ -143,14 +161,22 @@
             window.addEventListener('mousedown', onMouseDown, false);
         }
         
-        // NEW: ฟังก์ชันสำหรับตั้งค่าเสียง
         function setupSounds() {
             if (Tone.context.state !== 'running') {
                 Tone.start();
             }
-            hitGoodSound = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination();
+            const synthOptions = { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } };
+            hitGoodSound = new Tone.Synth(synthOptions).toDestination();
             hitBadSound = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination();
             startSound = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination();
+            powerupSound = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.2 } }).toDestination();
+
+            // NEW: เพลงประกอบ
+            const musicSynth = new Tone.Synth().toDestination();
+            backgroundMusic = new Tone.Sequence((time, note) => {
+                musicSynth.triggerAttackRelease(note, "8n", time);
+            }, ["C3", "E3", "G3", "B3"], "4n").start(0);
+            Tone.Transport.bpm.value = 130;
         }
 
         function onWindowResize() {
@@ -172,25 +198,28 @@
         function startGame() {
             if (isPlaying) return;
 
-            // NEW: เริ่มระบบเสียงเมื่อผู้เล่นเริ่มเกมครั้งแรก
-            if (!hitGoodSound) {
-                setupSounds();
-            }
+            if (!hitGoodSound) setupSounds();
+            
             startSound.triggerAttackRelease("C4", "8n");
+            Tone.Transport.start();
 
             if (spawnInterval) clearInterval(spawnInterval);
             if (gameTimer) clearTimeout(gameTimer);
+            if (slowMotionTimer) clearTimeout(slowMotionTimer);
 
             foods.forEach(food => scene.remove(food));
             foods.length = 0;
 
             isPlaying = true;
             score = 0;
+            comboCount = 0;
+            gameSpeedMultiplier = 1;
             remainingTime = GAME_DURATION;
             updateScoreUI();
+            updateComboUI();
             document.getElementById('message').style.display = 'none';
 
-            spawnInterval = setInterval(spawnFood, 1000);
+            spawnInterval = setInterval(spawnFood, 800); // ปล่อยอาหารเร็วขึ้น
             gameTimer = setTimeout(endGame, GAME_DURATION * 1000);
         }
 
@@ -198,35 +227,42 @@
             isPlaying = false;
             clearInterval(spawnInterval);
             clearTimeout(gameTimer);
+            clearTimeout(slowMotionTimer);
+            Tone.Transport.stop();
             
             const messageEl = document.getElementById('message');
             messageEl.innerHTML = `เกมจบแล้ว! คะแนนสุดท้าย: ${score}<br>คลิก หรือ กด Trigger เพื่อเล่นอีกครั้ง`;
             messageEl.style.display = 'block';
+            document.getElementById('combo').style.transform = 'scale(0)';
         }
         
-        // UPDATED: ฟังก์ชันปล่อยอาหารที่ซับซ้อนขึ้น
         function spawnFood() {
             if (!isPlaying) return;
             const rand = Math.random();
             let food;
-            const speed = 0.03 + Math.random() * 0.04; // สุ่มความเร็วพื้นฐาน
+            const speed = 0.03 + Math.random() * 0.04;
 
-            if (rand < 0.05) { // 5% โอกาสเกิดแอปเปิ้ลทอง
+            if (rand < 0.04) { // 4% แอปเปิ้ลทอง
                 const geometry = new THREE.IcosahedronGeometry(0.18, 0);
                 const material = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xFFD700, emissiveIntensity: 0.5 });
                 food = new THREE.Mesh(geometry, material);
-                food.userData = { type: 'golden', points: 50, speed: speed + 0.03 }; // เร็วเป็นพิเศษ
-            } else if (rand < 0.15) { // 10% โอกาสเกิดระเบิด
+                food.userData = { type: 'golden', points: 50, speed: speed + 0.03 };
+            } else if (rand < 0.12) { // 8% ระเบิด
                 const geometry = new THREE.SphereGeometry(0.15, 16, 16);
                 const material = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xff0000, emissiveIntensity: 0.4 });
                 food = new THREE.Mesh(geometry, material);
                 food.userData = { type: 'bomb', points: -25, speed: speed };
-            } else if (rand < 0.40) { // 25% อาหารไม่ดี
+            } else if (rand < 0.18) { // 6% นาฬิกา
+                const geometry = new THREE.TorusGeometry(0.12, 0.04, 8, 24);
+                const material = new THREE.MeshStandardMaterial({ color: 0x00BFFF, emissive: 0x00BFFF, emissiveIntensity: 0.7 });
+                food = new THREE.Mesh(geometry, material);
+                food.userData = { type: 'slowmo', points: 0, speed: speed };
+            } else if (rand < 0.45) { // 27% อาหารไม่ดี
                 const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
                 const material = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
                 food = new THREE.Mesh(geometry, material);
                 food.userData = { type: 'bad', points: -5, speed: speed };
-            } else { // 60% อาหารดี
+            } else { // 55% อาหารดี
                 const geometry = new THREE.SphereGeometry(0.15, 16, 16);
                 const colors = [0x00ff00, 0xffff00, 0xffa500];
                 const color = colors[Math.floor(Math.random() * colors.length)];
@@ -235,9 +271,9 @@
                 food.userData = { type: 'good', points: 10, speed: speed };
             }
 
-            food.position.x = (Math.random() - 0.5) * 4;
-            food.position.y = 1 + Math.random() * 1;
-            food.position.z = -10;
+            food.position.x = (Math.random() - 0.5) * 5;
+            food.position.y = 1 + Math.random() * 1.5;
+            food.position.z = -12;
             food.rotation.x = Math.random() * Math.PI;
             food.rotation.y = Math.random() * Math.PI;
 
@@ -248,22 +284,69 @@
         function updateScoreUI() {
             document.getElementById('score').textContent = `คะแนน: ${score} | เวลา: ${Math.ceil(remainingTime)}`;
         }
+        
+        // NEW: ฟังก์ชันอัปเดต UI คอมโบ
+        function updateComboUI() {
+            const comboEl = document.getElementById('combo');
+            if (comboCount > 2) {
+                comboEl.textContent = `COMBO x${comboCount}!`;
+                comboEl.style.transform = 'scale(1)';
+            } else {
+                comboEl.style.transform = 'scale(0)';
+            }
+        }
+        
+        // NEW: ฟังก์ชันเปิดใช้ Slow-motion
+        function activateSlowMotion() {
+            powerupSound.triggerAttackRelease("A4", "4n");
+            gameSpeedMultiplier = 0.3; // ทำให้เกมช้าลง
+            if (slowMotionTimer) clearTimeout(slowMotionTimer);
+            slowMotionTimer = setTimeout(() => {
+                gameSpeedMultiplier = 1; // กลับสู่ความเร็วปกติ
+            }, 5000); // 5 วินาที
+        }
+        
+        // NEW: ฟังก์ชันสร้างเอฟเฟกต์
+        function createExplosion(position, color) {
+            for (let i = 0; i < 15; i++) {
+                const particleGeometry = new THREE.BoxGeometry(0.02, 0.02, 0.02);
+                const particleMaterial = new THREE.MeshBasicMaterial({ color: color });
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.position.copy(position);
+                particle.userData.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.5,
+                    (Math.random() - 0.5) * 0.5,
+                    (Math.random() - 0.5) * 0.5
+                );
+                particle.userData.life = 1; // อายุขัยของ particle
+                particles.push(particle);
+                scene.add(particle);
+            }
+        }
 
-        // NEW: ฟังก์ชันกลางสำหรับจัดการเมื่อฟันโดนอาหาร
         function onFoodHit(food) {
-            score += food.userData.points;
-            updateScoreUI();
+            const comboMultiplier = Math.max(1, Math.floor(comboCount / 5)); // ได้โบนัสทุก 5 คอมโบ
+            
+            createExplosion(food.position, food.material.color);
 
             if (food.userData.type === 'good' || food.userData.type === 'golden') {
-                hitGoodSound.triggerAttackRelease("C5", "8n");
-            } else {
+                comboCount++;
+                score += food.userData.points * comboMultiplier;
+                hitGoodSound.triggerAttackRelease(food.userData.type === 'golden' ? "C6" : "C5", "8n");
+            } else if (food.userData.type === 'slowmo') {
+                activateSlowMotion();
+            } else { // bad, bomb
+                comboCount = 0;
+                score += food.userData.points;
                 hitBadSound.triggerAttackRelease("C3", "8n");
             }
 
+            updateScoreUI();
+            updateComboUI();
+
             const index = foods.indexOf(food);
-            if (index > -1) {
-                foods.splice(index, 1);
-            }
+            if (index > -1) foods.splice(index, 1);
+            
             scene.remove(food);
         }
 
@@ -283,11 +366,27 @@
                 saber.getWorldPosition(saberPosition);
                 for (let i = foods.length - 1; i >= 0; i--) {
                     const food = foods[i];
-                    if (saberPosition.distanceTo(food.position) < 0.2) { 
+                    if (saberPosition.distanceTo(food.position) < 0.25) { // เพิ่มระยะการฟันเล็กน้อย
                         onFoodHit(food);
                     }
                 }
             });
+        }
+        
+        // NEW: ฟังก์ชันสำหรับขยับเอฟเฟกต์
+        function animateParticles(deltaTime) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.userData.life -= deltaTime * 1.5;
+                if (p.userData.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                } else {
+                    p.position.add(p.userData.velocity);
+                    p.material.opacity = p.userData.life;
+                    p.material.transparent = true;
+                }
+            }
         }
 
         function animate() {
@@ -296,28 +395,33 @@
         
         let lastTime = 0;
         function render(time) {
-            if (lastTime > 0) {
-                const deltaTime = (time - lastTime) / 1000;
-                if (isPlaying && remainingTime > 0) {
+            const deltaTime = lastTime > 0 ? (time - lastTime) / 1000 : 0;
+            lastTime = time;
+
+            if (isPlaying) {
+                if (remainingTime > 0) {
                     const prevRemainingTime = remainingTime;
                     remainingTime = Math.max(0, remainingTime - deltaTime);
                     if (Math.ceil(prevRemainingTime) !== Math.ceil(remainingTime)) {
                          updateScoreUI();
                     }
                 }
-            }
-            lastTime = time;
-
-            if (isPlaying) {
+            
                 foods.forEach((food, index) => {
-                    food.position.z += food.userData.speed; // UPDATED: ใช้ความเร็วของแต่ละชิ้น
+                    food.position.z += food.userData.speed * gameSpeedMultiplier; // ใช้ตัวคูณความเร็ว
                     food.rotation.x += 0.01;
                     food.rotation.y += 0.01;
                     if (food.position.z > camera.position.z) {
+                        if(food.userData.type === 'good' || food.userData.type === 'golden') {
+                           comboCount = 0; // NEW: หากปล่อยอาหารดีหลุดไป คอมโบจะหาย
+                           updateComboUI();
+                        }
                         scene.remove(food);
                         foods.splice(index, 1);
                     }
                 });
+                
+                animateParticles(deltaTime); // NEW: เรียกใช้ animation ของ particle
 
                 if (renderer.xr.isPresenting) {
                     handleVRCollisions();
