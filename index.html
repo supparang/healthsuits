@@ -101,7 +101,7 @@
         // --- ตัวแปรสำหรับเสียง ---
         let hitGoodSound, hitBadSound, startSound, powerupSound, backgroundMusic;
         let isAudioReady = false;
-        let isInitializingAudio = false; // NEW: ป้องกันการกดเริ่มซ้ำซ้อน
+        let isInitializingAudio = false;
 
         // --- ตัวแปรสำหรับเกม ---
         const foods = [];
@@ -199,7 +199,29 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // FIXED: ปรับปรุงกระบวนการเริ่มเกมทั้งหมดให้ทนทานต่อข้อผิดพลาด
+        // NEW: สร้างฟังก์ชัน async สำหรับจัดการการเริ่มเสียงโดยเฉพาะ
+        async function initializeAudioAndStart() {
+            // ป้องกันการเรียกซ้ำ และถ้าเสียงพร้อมแล้วก็ไม่ต้องทำอะไร
+            if (isInitializingAudio || isAudioReady) return;
+            isInitializingAudio = true;
+
+            document.getElementById('message').innerHTML = "กำลังเริ่ม...";
+
+            try {
+                await Tone.start();
+                setupSounds();
+                isAudioReady = true;
+            } catch (error) {
+                console.error("ไม่สามารถเริ่มระบบเสียงได้, เกมจะทำงานโดยไม่มีเสียง:", error);
+                // isAudioReady จะยังเป็น false
+            } finally {
+                isInitializingAudio = false;
+                // สิ่งสำคัญ: เริ่มเกมเสมอ ไม่ว่าเสียงจะสำเร็จหรือไม่
+                startGame();
+            }
+        }
+
+        // UPDATED: ทำให้ handleUserInteraction ง่ายขึ้น
         function handleUserInteraction(event) {
             // ถ้าเกมกำลังเล่นอยู่ และเป็นการคลิกเมาส์ ให้จัดการการฟันอาหาร
             if (isPlaying && event && event.type === 'mousedown') {
@@ -212,27 +234,10 @@
             // ถ้าเกมยังไม่เริ่ม หรือจบไปแล้ว
             if (!isPlaying) {
                 if (!isAudioReady) {
-                    // ป้องกันการเรียกซ้ำขณะกำลังโหลดเสียง
-                    if (isInitializingAudio) return;
-                    isInitializingAudio = true;
-
-                    const messageEl = document.getElementById('message');
-                    messageEl.innerHTML = "กำลังเริ่ม...";
-                    
-                    Tone.start().then(() => {
-                        setupSounds();
-                        isAudioReady = true;
-                        startGame();
-                    }).catch(error => {
-                        console.error("ไม่สามารถเริ่มระบบเสียงได้:", error);
-                        // เริ่มเกมโดยไม่มีเสียง
-                        isAudioReady = true; // ตั้งค่าเป็น true เพื่อไม่ให้พยายามเริ่มเสียงอีก
-                        startGame();
-                    }).finally(() => {
-                        isInitializingAudio = false;
-                    });
+                    // เรียกฟังก์ชันจัดการเสียงครั้งแรก
+                    initializeAudioAndStart();
                 } else {
-                    // การเริ่มเกมครั้งถัดๆ ไป
+                    // การเริ่มเกมครั้งถัดๆ ไป (เมื่อเสียงพร้อมแล้ว)
                     startGame();
                 }
             }
@@ -241,8 +246,8 @@
         function startGame() {
             if (isPlaying) return;
             
-            // FIXED: ตรวจสอบก่อนเล่นเสียง
-            if (isAudioReady && startSound) {
+            // ตรวจสอบก่อนเล่นเสียงเสมอ
+            if (startSound) {
                 startSound.triggerAttackRelease("C4", "8n");
                 Tone.Transport.start();
             }
@@ -277,8 +282,8 @@
             clearTimeout(slowMotionTimer);
             clearTimeout(multiplierTimer);
             
-            // FIXED: ตรวจสอบก่อนหยุดเสียง
-            if (isAudioReady && Tone.Transport.state === "started") {
+            // ตรวจสอบก่อนหยุดเสียง
+            if (backgroundMusic && Tone.Transport.state === "started") {
                 Tone.Transport.stop();
             }
             
@@ -383,7 +388,7 @@
         }
 
         function activateSlowMotion() {
-            if (isAudioReady && powerupSound) powerupSound.triggerAttackRelease("A4", "4n");
+            if (powerupSound) powerupSound.triggerAttackRelease("A4", "4n");
             gameSpeedMultiplier = 0.3; 
             showPowerupStatus("SLOW MOTION!", "#00BFFF");
             if (slowMotionTimer) clearTimeout(slowMotionTimer);
@@ -394,7 +399,7 @@
         }
 
         function activateMultiplier() {
-            if (isAudioReady && powerupSound) powerupSound.triggerAttackRelease("G4", "4n");
+            if (powerupSound) powerupSound.triggerAttackRelease("G4", "4n");
             scoreMultiplier = 2;
             showPowerupStatus("SCORE x2 !", "#9400D3");
             if (multiplierTimer) clearTimeout(multiplierTimer);
@@ -426,7 +431,7 @@
             if (food.userData.type === 'good' || food.userData.type === 'golden') {
                 comboCount++;
                 score += food.userData.points * comboMultiplier * scoreMultiplier;
-                if(isAudioReady && hitGoodSound) hitGoodSound.triggerAttackRelease(food.userData.type === 'golden' ? "C6" : "C5", "8n");
+                if (hitGoodSound) hitGoodSound.triggerAttackRelease(food.userData.type === 'golden' ? "C6" : "C5", "8n");
             } else if (food.userData.type === 'slowmo') {
                 activateSlowMotion();
             } else if (food.userData.type === 'multiplier') {
@@ -434,7 +439,7 @@
             } else { // bad, bomb
                 comboCount = 0;
                 score += food.userData.points;
-                if(isAudioReady && hitBadSound) hitBadSound.triggerAttackRelease("C3", "8n");
+                if (hitBadSound) hitBadSound.triggerAttackRelease("C3", "8n");
             }
 
             updateScoreUI();
